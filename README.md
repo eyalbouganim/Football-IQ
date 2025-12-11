@@ -1,195 +1,169 @@
 # Football-IQ ⚽
 
-An interactive trivia game to test your knowledge about football with SQL-themed questions! Built as part of the Databases workshop.
+An interactive SQL learning game using real football data! Practice aggregation queries (GROUP BY, JOINs, HAVING) on a real database. Built as part of the Databases workshop.
 
 ## Features
 
-- 🎮 **Interactive Quiz Game** - Test your football knowledge across multiple difficulty levels
-- 🏆 **Leaderboard** - Compete with other players and track your rankings
-- 📊 **Statistics** - Track your progress, high scores, and game history
-- 🔐 **User Authentication** - Secure registration and login system
-- 💾 **Persistent Data** - PostgreSQL database for reliable data storage
-- 🎯 **SQL Questions** - Expert mode includes SQL-themed football questions
+- 🎯 **15 SQL Challenges** - From easy GROUP BY to expert subqueries
+- 📊 **Real Football Data** - 10,000+ players, 20,000+ games, transfers & more
+- 💻 **Live Query Editor** - Write and execute SQL against real data
+- 🏆 **Leaderboard** - Compete with other players
+- 🎮 **Trivia Mode** - Football knowledge quiz
+- 🔐 **User Authentication** - Track your progress
 
 ## Tech Stack
 
-### Backend
-- **Node.js** + **Express.js** - REST API server
-- **PostgreSQL** - Relational database
-- **Sequelize** - ORM for database operations
-- **JWT** - Authentication tokens
-- **bcrypt** - Password hashing
-- **Helmet** - Security headers
-- **Rate Limiting** - API protection
+- **Backend:** Node.js, Express.js, SQLite, Sequelize, JWT
+- **Frontend:** React 19, Ant Design, React Router
+- **Security:** Helmet, CORS, Rate Limiting, bcrypt
 
-### Frontend
-- **React 19** - UI framework
-- **Ant Design** - Component library
-- **React Router** - Client-side routing
-- **Axios** - HTTP client
-- **Context API** - State management
+## Quick Start
 
-## Prerequisites
-
-- Node.js 18+ 
-- PostgreSQL 14+
-- npm or yarn
-
-## Getting Started
-
-### 1. Clone the Repository
+### 1. Clone & Install
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/eyalbouganim/Football-IQ.git
 cd Football-IQ
+
+# Install backend
+cd backend
+npm install
+
+# Install frontend
+cd ../frontend
+npm install
 ```
 
-### 2. Database Setup
+### 2. Download Football Data (REQUIRED)
 
-Create a PostgreSQL database:
+⚠️ **CSV files are not included in the repo.** Download them and place in `db/` folder:
 
-```sql
-CREATE DATABASE football_iq;
-```
+**Required CSV files:**
+- `players.csv`
+- `clubs.csv`
+- `games.csv`
+- `competitions.csv`
+- `appearances.csv`
+- `transfers.csv`
+- `game_events.csv`
+- `player_valuations.csv`
+- `club_games.csv`
+- `game_lineups.csv`
 
-### 3. Backend Setup
+Data source: [Transfermarkt Football Data](https://www.kaggle.com/datasets/davidcariboo/player-scores) or ask your team member for the files.
+
+### 3. Setup Database
 
 ```bash
 cd backend
 
-# Install dependencies
-npm install
+# Create .env file
+echo "NODE_ENV=development
+PORT=3001
+DB_DIALECT=sqlite
+JWT_SECRET=your_secret_key_here
+JWT_EXPIRES_IN=24h
+FRONTEND_URL=http://localhost:3000" > .env
 
-# Create environment file
-cp .env.example .env
-
-# Edit .env with your database credentials
-# DB_HOST=localhost
-# DB_PORT=5432
-# DB_NAME=football_iq
-# DB_USER=postgres
-# DB_PASSWORD=your_password
-# JWT_SECRET=your_secret_key
-
-# Seed the database with questions
+# Seed user database
 npm run seed
 
-# Start the server
+# Load football data from CSVs
+npm run load-data
+```
+
+### 4. Run the App
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
 npm run dev
 ```
 
-### 4. Frontend Setup
-
+**Terminal 2 - Frontend:**
 ```bash
 cd frontend
-
-# Install dependencies
-npm install
-
-# Start the development server
 npm start
 ```
 
-### 5. Access the Application
+### 5. Open in Browser
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
-- Health Check: http://localhost:3001/api/health
+- **App:** http://localhost:3000
+- **API:** http://localhost:3001
 
-## Demo Account
+**Demo Account:** `demo` / `Demo@123!`
 
-After seeding the database, you can use:
-- **Username:** demo
-- **Password:** Demo@123!
+## SQL Challenges
 
-## API Endpoints
+Practice these SQL concepts with real football data:
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/profile` - Get user profile (protected)
-- `PUT /api/auth/profile` - Update profile (protected)
+| Difficulty | Topics |
+|------------|--------|
+| Easy | GROUP BY, COUNT, ORDER BY |
+| Medium | HAVING, SUM, AVG, multiple aggregates |
+| Hard | JOINs with GROUP BY, multi-table queries |
+| Expert | Subqueries, CASE statements, window-like queries |
 
-### Game
-- `POST /api/game/start` - Start new game session (protected)
-- `POST /api/game/:sessionId/answer` - Submit answer (protected)
-- `POST /api/game/:sessionId/end` - End game session (protected)
-- `GET /api/game/stats` - Get user statistics (protected)
-- `GET /api/game/leaderboard` - Get leaderboard
+**Example Challenge:**
+> Find players who scored more than 10 goals. Show player name and total goals.
 
-### Questions
-- `GET /api/questions` - Get questions list
-- `GET /api/questions/categories` - Get available categories
-- `GET /api/questions/difficulties` - Get difficulty levels
-
-### Health
-- `GET /api/health` - Health check with database status
-- `GET /api/health/ready` - Readiness probe
-- `GET /api/health/live` - Liveness probe
+```sql
+SELECT player_name, SUM(goals) as total_goals 
+FROM appearances 
+GROUP BY player_id, player_name 
+HAVING SUM(goals) > 10
+ORDER BY total_goals DESC
+```
 
 ## Project Structure
 
 ```
 Football-IQ/
 ├── backend/
-│   ├── config/           # Configuration files
-│   ├── controllers/      # Request handlers
-│   ├── middleware/       # Custom middleware
-│   ├── models/           # Sequelize models
-│   ├── routes/           # API routes
-│   ├── scripts/          # Database seeds
-│   └── server.js         # Entry point
+│   ├── config/          # Database & app config
+│   ├── controllers/     # API logic
+│   ├── data/            # SQL challenges
+│   ├── middleware/      # Auth, validation
+│   ├── models/          # Sequelize models
+│   ├── routes/          # API routes
+│   ├── scripts/         # Seed & data loader
+│   └── server.js
 ├── frontend/
-│   ├── public/           # Static files
 │   └── src/
-│       ├── components/   # React components
-│       ├── context/      # React context
-│       ├── services/     # API services
-│       └── App.js        # Main component
+│       ├── components/  # React components
+│       ├── context/     # Auth context
+│       └── services/    # API client
+├── db/                  # CSV files (gitignored)
 └── README.md
 ```
 
-## Environment Variables
+## API Endpoints
 
-### Backend (.env)
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/register` | Register user |
+| `POST /api/auth/login` | Login |
+| `GET /api/sql/challenges` | Get SQL challenges |
+| `POST /api/sql/execute` | Run SQL query |
+| `POST /api/sql/challenges/:id/submit` | Submit answer |
+| `GET /api/sql/schema` | Get database schema |
+| `GET /api/sql/leaderboard` | Leaderboard |
 
-```env
-NODE_ENV=development
-PORT=3001
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=football_iq
-DB_USER=postgres
-DB_PASSWORD=your_password
-JWT_SECRET=your_super_secret_key
-JWT_EXPIRES_IN=24h
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-FRONTEND_URL=http://localhost:3000
+## Database Schema
+
+```
+players: player_id, name, country_of_citizenship, position, market_value_in_eur, current_club_id
+clubs: club_id, name, stadium_name, squad_size, average_age
+games: game_id, home_club_id, away_club_id, home_club_goals, away_club_goals, attendance, season
+appearances: player_id, game_id, goals, assists, yellow_cards, red_cards, minutes_played
+transfers: player_id, from_club_id, to_club_id, transfer_fee, transfer_date
+competitions: competition_id, name, country_name, type
 ```
 
-## Production Deployment
+## Team
 
-### Backend
-1. Set `NODE_ENV=production`
-2. Use strong JWT_SECRET
-3. Configure production database
-4. Set up proper rate limiting
-5. Enable HTTPS
-
-### Frontend
-1. Build production bundle: `npm run build`
-2. Serve static files via CDN or web server
-3. Configure environment variables
+Built for the Databases Workshop
 
 ## License
 
-MIT License
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+MIT
