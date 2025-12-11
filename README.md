@@ -2,6 +2,34 @@
 
 An interactive SQL learning game using real football data! Practice aggregation queries (GROUP BY, JOINs, HAVING) on a real database. Built as part of the Databases workshop.
 
+---
+
+## ⚠️ EYAL READ THIS FIRST ⚠️
+
+**The CSV data files are NOT included in this repository!**
+
+**You need to:**
+1. **Get the CSV files from Gil** (via Google Drive, USB, or WhatsApp)
+2. **Create a `db/` folder** in the project root
+3. **Put ALL the CSV files inside the `db/` folder**
+4. **Then run `npm run load-data`** in the backend folder to load them into SQLite
+
+**Required CSV files:**
+- `players.csv`
+- `clubs.csv` 
+- `games.csv`
+- `competitions.csv`
+- `appearances.csv`
+- `transfers.csv`
+- `game_events.csv`
+- `player_valuations.csv`
+- `club_games.csv`
+- `game_lineups.csv`
+
+**Without these files, the SQL challenges won't work!**
+
+---
+
 ## Features
 
 - 🎯 **15 SQL Challenges** - From easy GROUP BY to expert subqueries
