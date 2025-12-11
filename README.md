@@ -9,10 +9,9 @@ An interactive SQL learning game using real football data! Practice aggregation 
 **The CSV data files are NOT included in this repository!**
 
 **You need to:**
-1. **Get the CSV files from Gil** (via Google Drive, USB, or WhatsApp)
-2. **Create a `db/` folder** in the project root
-3. **Put ALL the CSV files inside the `db/` folder**
-4. **Then run `npm run load-data`** in the backend folder to load them into SQLite
+1. **Create a `db/` folder** in the project root
+2. **Put ALL the CSV files inside the `db/` folder**
+3. **Then run `npm run load-data`** in the backend folder to load them into SQLite
 
 **Required CSV files:**
 - `players.csv`
