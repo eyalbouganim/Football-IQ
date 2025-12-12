@@ -1,76 +1,108 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+const { pool } = require('../config/database');
 
-const Question = sequelize.define('Question', {
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
-    },
-    question: {
-        type: DataTypes.TEXT,
-        allowNull: false
-    },
-    options: {
-        type: DataTypes.JSONB,
-        allowNull: false,
-        validate: {
-            isValidOptions(value) {
-                if (!Array.isArray(value) || value.length < 2 || value.length > 6) {
-                    throw new Error('Options must be an array with 2-6 choices');
-                }
-            }
-        }
-    },
-    correctAnswer: {
-        type: DataTypes.STRING(500),
-        allowNull: false,
-        field: 'correct_answer'
-    },
-    difficulty: {
-        type: DataTypes.ENUM('easy', 'medium', 'hard', 'expert'),
-        defaultValue: 'medium'
-    },
-    category: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        defaultValue: 'general'
-    },
-    points: {
-        type: DataTypes.INTEGER,
-        defaultValue: 10
-    },
-    explanation: {
-        type: DataTypes.TEXT
-    },
-    sqlQuery: {
-        type: DataTypes.TEXT,
-        field: 'sql_query',
-        comment: 'The SQL query this question tests knowledge of'
-    },
-    isActive: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        field: 'is_active'
-    },
-    timesAnswered: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        field: 'times_answered'
-    },
-    timesCorrect: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        field: 'times_correct'
+class Question {
+    constructor(id, question, options, correctAnswer, difficulty, category, points, explanation, sqlQuery, isActive, timesAnswered, timesCorrect) {
+        this.id = id;
+        this.question = question;
+        this.options = options;
+        this.correctAnswer = correctAnswer;
+        this.difficulty = difficulty;
+        this.category = category;
+        this.points = points;
+        this.explanation = explanation;
+        this.sqlQuery = sqlQuery;
+        this.isActive = isActive;
+        this.timesAnswered = timesAnswered;
+        this.timesCorrect = timesCorrect;
     }
-}, {
-    tableName: 'questions',
-    indexes: [
-        { fields: ['difficulty'] },
-        { fields: ['category'] },
-        { fields: ['is_active'] }
-    ]
-});
+
+    static async create(questionData) {
+        const { question, options, correctAnswer, difficulty, category, points, explanation, sqlQuery } = questionData;
+        const [result] = await pool.execute(
+            'INSERT INTO questions (question, options, correct_answer, difficulty, category, points, explanation, sql_query) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [question, JSON.stringify(options), correctAnswer, difficulty, category, points, explanation, sqlQuery]
+        );
+        return new Question(result.insertId, question, options, correctAnswer, difficulty, category, points, explanation, sqlQuery);
+    }
+
+    static async findById(id) {
+        const [rows] = await pool.execute('SELECT * FROM questions WHERE id = ?', [id]);
+        if (rows.length === 0) return null;
+        const q = rows[0];
+        return new Question(q.id, q.question, JSON.parse(q.options), q.correct_answer, q.difficulty, q.category, q.points, q.explanation, q.sql_query, q.is_active, q.times_answered, q.times_correct);
+    }
+
+    static async getAll() {
+        const [rows] = await pool.execute('SELECT * FROM questions');
+        return rows.map(q => new Question(q.id, q.question, JSON.parse(q.options), q.correct_answer, q.difficulty, q.category, q.points, q.explanation, q.sql_query, q.is_active, q.times_answered, q.times_correct));
+    }
+
+    static async findAndCountAll({ where = {}, limit = 20, offset = 0, order = [['createdAt', 'DESC']] }) {
+        const whereClauses = [];
+        const whereValues = [];
+        for (const key in where) {
+            whereClauses.push(`${key} = ?`);
+            whereValues.push(where[key]);
+        }
+        const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        const orderString = order.map(o => `${o[0]} ${o[1]}`).join(', ');
+
+        const countSql = `SELECT COUNT(*) as count FROM questions ${whereString}`;
+        const [countRows] = await pool.execute(countSql, whereValues);
+        const count = countRows[0].count;
+
+        const sql = `SELECT id, question, options, difficulty, category, points FROM questions ${whereString} ORDER BY ${orderString} LIMIT ? OFFSET ?`;
+        const [rows] = await pool.execute(sql, [...whereValues, limit, offset]);
+
+        const questions = rows.map(q => new Question(q.id, q.question, JSON.parse(q.options), null, q.difficulty, q.category, q.points));
+        return { rows: questions, count };
+    }
+
+    static async getCategories() {
+        const [rows] = await pool.execute('SELECT DISTINCT category FROM questions WHERE isActive = true');
+        return rows.map(r => r.category);
+    }
+
+    static async findAll({ where = {}, order = null, limit = null }) {
+        const whereClauses = [];
+        const whereValues = [];
+        for (const key in where) {
+            whereClauses.push(`${key} = ?`);
+            whereValues.push(where[key]);
+        }
+        const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        let orderString = '';
+        if (order === 'random') {
+            orderString = 'ORDER BY RAND()';
+        } else if (order && order.length > 0) {
+            orderString = `ORDER BY ${order.map(o => `${o[0]} ${o[1]}`).join(', ')}`;
+        }
+        
+        const limitString = limit ? 'LIMIT ?' : '';
+        const limitValue = limit ? [limit] : [];
+
+        const sql = `SELECT * FROM questions ${whereString} ${orderString} ${limitString}`;
+        const [rows] = await pool.execute(sql, [...whereValues, ...limitValue]);
+        return rows.map(q => new Question(q.id, q.question, JSON.parse(q.options), q.correct_answer, q.difficulty, q.category, q.points, q.explanation, q.sql_query, q.is_active, q.times_answered, q.times_correct));
+    }
+
+    static async update(id, updateData) {
+        const fields = [];
+        const values = [];
+        for (const key in updateData) {
+            fields.push(`${key} = ?`);
+            values.push(updateData[key]);
+        }
+        if (fields.length === 0) return Question.findById(id);
+
+        const sql = `UPDATE questions SET ${fields.join(', ')} WHERE id = ?`;
+        values.push(id);
+
+        await pool.execute(sql, values);
+        return Question.findById(id);
+    }
+}
 
 module.exports = Question;
-

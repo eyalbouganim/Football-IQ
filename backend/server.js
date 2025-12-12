@@ -10,7 +10,6 @@ const config = require('./config');
 const routes = require('./routes');
 const { globalErrorHandler, notFound } = require('./middleware/errorHandler');
 const { testConnection } = require('./config/database');
-const { syncDatabase } = require('./models');
 
 const app = express();
 
@@ -90,9 +89,6 @@ const startServer = async () => {
             console.error('❌ Failed to connect to database. Exiting...');
             process.exit(1);
         }
-
-        // Sync database models
-        await syncDatabase();
 
         // Start server
         app.listen(config.port, () => {

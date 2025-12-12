@@ -1,4 +1,4 @@
-const { sequelize } = require('../config/database');
+const { pool } = require('../config/database');
 const { sqlChallenges } = require('../data/sqlChallenges');
 const { AppError } = require('../middleware/errorHandler');
 
@@ -6,7 +6,7 @@ const { AppError } = require('../middleware/errorHandler');
 const getChallenges = async (req, res, next) => {
     try {
         const { difficulty } = req.query;
-        
+
         let challenges = sqlChallenges.map(c => ({
             id: c.id,
             difficulty: c.difficulty,
@@ -89,10 +89,7 @@ const executeQuery = async (req, res, next) => {
 
         // Execute the query with timeout
         const startTime = Date.now();
-        const [results] = await sequelize.query(query, {
-            timeout: 5000, // 5 second timeout
-            raw: true
-        });
+        const [results] = await pool.query(query);
         const executionTime = Date.now() - startTime;
 
         // Limit results
@@ -153,11 +150,11 @@ const submitChallenge = async (req, res, next) => {
 
         try {
             // Execute user query
-            const [userRows] = await sequelize.query(query, { timeout: 5000, raw: true });
+            const [userRows] = await pool.query(query);
             userResults = userRows;
 
             // Execute expected query
-            const [expectedRows] = await sequelize.query(challenge.expectedQuery, { timeout: 5000, raw: true });
+            const [expectedRows] = await pool.query(challenge.expectedQuery);
             expectedResults = expectedRows;
 
             // Validate using the challenge's validation function
@@ -166,7 +163,7 @@ const submitChallenge = async (req, res, next) => {
                 if (userResults.length > 0 && expectedResults.length > 0) {
                     const userCols = Object.keys(userResults[0]).sort();
                     const expectedCols = Object.keys(expectedResults[0]).sort();
-                    
+
                     // Check if columns are similar (allowing for different aliases)
                     if (userCols.length >= expectedCols.length - 1) {
                         isCorrect = true;
@@ -192,14 +189,13 @@ const submitChallenge = async (req, res, next) => {
         // Update user score if correct
         if (isCorrect && userId) {
             const { User } = require('../models');
-            const user = await User.findByPk(userId);
+            const user = await User.findById(userId);
             if (user) {
-                user.totalScore += challenge.points;
-                user.gamesPlayed += 1;
-                if (challenge.points > user.highestScore) {
-                    user.highestScore = challenge.points;
-                }
-                await user.save();
+                await User.update(userId, {
+                    totalScore: user.totalScore + challenge.points,
+                    gamesPlayed: user.gamesPlayed + 1,
+                    highestScore: challenge.points > user.highestScore ? challenge.points : user.highestScore
+                });
             }
         }
 
@@ -340,16 +336,14 @@ const getSchema = async (req, res, next) => {
 const getSqlLeaderboard = async (req, res, next) => {
     try {
         const { User } = require('../models');
-        const { Op } = require('sequelize');
 
         const users = await User.findAll({
-            where: { 
+            where: {
                 isActive: true,
-                totalScore: { [Op.gt]: 0 }
+                'games_played': { '[Op.gt]': 0 }
             },
             order: [['totalScore', 'DESC']],
             limit: 20,
-            attributes: ['id', 'username', 'totalScore', 'gamesPlayed', 'favoriteTeam']
         });
 
         res.json({
@@ -377,4 +371,3 @@ module.exports = {
     getSchema,
     getSqlLeaderboard
 };
-

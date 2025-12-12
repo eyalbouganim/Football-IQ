@@ -13,7 +13,6 @@ const getQuestions = async (req, res, next) => {
             where: whereClause,
             limit: Math.min(parseInt(limit) || 20, 100),
             offset: parseInt(offset) || 0,
-            attributes: ['id', 'question', 'options', 'difficulty', 'category', 'points'],
             order: [['createdAt', 'DESC']]
         });
 
@@ -35,9 +34,7 @@ const getQuestionById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const question = await Question.findByPk(id, {
-            attributes: ['id', 'question', 'options', 'difficulty', 'category', 'points']
-        });
+        const question = await Question.findById(id);
 
         if (!question) {
             return next(new AppError('Question not found', 404));
@@ -54,16 +51,12 @@ const getQuestionById = async (req, res, next) => {
 
 const getCategories = async (req, res, next) => {
     try {
-        const categories = await Question.findAll({
-            where: { isActive: true },
-            attributes: ['category'],
-            group: ['category']
-        });
+        const categories = await Question.getCategories();
 
         res.json({
             success: true,
             data: {
-                categories: categories.map(c => c.category)
+                categories
             }
         });
     } catch (error) {
@@ -90,4 +83,3 @@ module.exports = {
     getCategories,
     getDifficulties
 };
-

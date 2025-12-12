@@ -14,23 +14,16 @@ const register = async (req, res, next) => {
         const { username, email, password, favoriteTeam } = req.body;
 
         // Check if user already exists
-        const existingUser = await User.findOne({
-            where: {
-                [require('sequelize').Op.or]: [
-                    { username: username.toLowerCase() },
-                    { email: email.toLowerCase() }
-                ]
-            }
-        });
-
+        let existingUser = await User.findByUsername(username.toLowerCase());
         if (existingUser) {
-            const field = existingUser.username.toLowerCase() === username.toLowerCase() 
-                ? 'Username' 
-                : 'Email';
-            return next(new AppError(`${field} already exists`, 400));
+            return next(new AppError('Username already exists', 400));
+        }
+        existingUser = await User.findByEmail(email.toLowerCase());
+        if (existingUser) {
+            return next(new AppError('Email already exists', 400));
         }
 
-        // Create user (password will be hashed by the model hook)
+        // Create user
         const user = await User.create({
             username: username.toLowerCase(),
             email: email.toLowerCase(),
@@ -58,14 +51,10 @@ const login = async (req, res, next) => {
         const { username, password } = req.body;
 
         // Find user by username or email
-        const user = await User.findOne({
-            where: {
-                [require('sequelize').Op.or]: [
-                    { username: username.toLowerCase() },
-                    { email: username.toLowerCase() }
-                ]
-            }
-        });
+        let user = await User.findByUsername(username.toLowerCase());
+        if (!user) {
+            user = await User.findByEmail(username.toLowerCase());
+        }
 
         if (!user) {
             return next(new AppError('Invalid credentials', 401));
@@ -112,28 +101,27 @@ const updateProfile = async (req, res, next) => {
     try {
         const { favoriteTeam, email } = req.body;
         const user = req.user;
+        const updateData = {};
 
-        if (email && email !== user.email) {
-            const existingEmail = await User.findOne({ 
-                where: { email: email.toLowerCase() } 
-            });
+        if (email && email.toLowerCase() !== user.email) {
+            const existingEmail = await User.findByEmail(email.toLowerCase());
             if (existingEmail) {
                 return next(new AppError('Email already in use', 400));
             }
-            user.email = email.toLowerCase();
+            updateData.email = email.toLowerCase();
         }
 
         if (favoriteTeam !== undefined) {
-            user.favoriteTeam = favoriteTeam;
+            updateData.favoriteTeam = favoriteTeam;
         }
 
-        await user.save();
+        const updatedUser = await User.update(user.id, updateData);
 
         res.json({
             success: true,
             message: 'Profile updated successfully',
             data: {
-                user: user.toJSON()
+                user: updatedUser.toJSON()
             }
         });
     } catch (error) {
@@ -155,8 +143,7 @@ const changePassword = async (req, res, next) => {
             return next(new AppError('New password must be at least 8 characters', 400));
         }
 
-        user.password = newPassword; // Will be hashed by model hook
-        await user.save();
+        await User.update(user.id, { password: newPassword });
 
         res.json({
             success: true,
@@ -174,4 +161,3 @@ module.exports = {
     updateProfile,
     changePassword
 };
-

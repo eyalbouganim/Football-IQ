@@ -17,7 +17,7 @@ const authenticate = async (req, res, next) => {
         
         const decoded = jwt.verify(token, config.jwt.secret);
         
-        const user = await User.findByPk(decoded.userId);
+        const user = await User.findById(decoded.userId);
         
         if (!user || !user.isActive) {
             return res.status(401).json({ 
@@ -57,7 +57,7 @@ const optionalAuth = async (req, res, next) => {
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
             const decoded = jwt.verify(token, config.jwt.secret);
-            const user = await User.findByPk(decoded.userId);
+            const user = await User.findById(decoded.userId);
             
             if (user && user.isActive) {
                 req.user = user;

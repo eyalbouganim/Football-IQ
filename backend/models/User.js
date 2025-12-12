@@ -1,84 +1,116 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
+const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
 
-const User = sequelize.define('User', {
-    id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true
-    },
-    username: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true,
-        validate: {
-            len: [3, 50],
-            isAlphanumeric: true
-        }
-    },
-    email: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-        unique: true,
-        validate: {
-            isEmail: true
-        }
-    },
-    password: {
-        type: DataTypes.STRING(255),
-        allowNull: false
-    },
-    favoriteTeam: {
-        type: DataTypes.STRING(100),
-        field: 'favorite_team'
-    },
-    totalScore: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        field: 'total_score'
-    },
-    gamesPlayed: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        field: 'games_played'
-    },
-    highestScore: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        field: 'highest_score'
-    },
-    isActive: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        field: 'is_active'
+class User {
+    constructor(id, username, email, password, favoriteTeam, totalScore, gamesPlayed, highestScore, isActive) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.favoriteTeam = favoriteTeam;
+        this.totalScore = totalScore;
+        this.gamesPlayed = gamesPlayed;
+        this.highestScore = highestScore;
+        this.isActive = isActive;
     }
-}, {
-    tableName: 'users',
-    hooks: {
-        beforeCreate: async (user) => {
-            if (user.password) {
-                user.password = await bcrypt.hash(user.password, 12);
-            }
-        },
-        beforeUpdate: async (user) => {
-            if (user.changed('password')) {
-                user.password = await bcrypt.hash(user.password, 12);
+
+    async validatePassword(password) {
+        return bcrypt.compare(password, this.password);
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            username: this.username,
+            email: this.email,
+            favoriteTeam: this.favoriteTeam,
+            totalScore: this.totalScore,
+            gamesPlayed: this.gamesPlayed,
+            highestScore: this.highestScore,
+            isActive: this.isActive,
+        };
+    }
+
+    static async create(userData) {
+        const { username, email, password, favoriteTeam } = userData;
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const [result] = await pool.execute(
+            'INSERT INTO users (username, email, password, favorite_team) VALUES (?, ?, ?, ?)',
+            [username, email, hashedPassword, favoriteTeam]
+        );
+        return new User(result.insertId, username, email, hashedPassword, favoriteTeam);
+    }
+
+    static async findById(id) {
+        const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
+        if (rows.length === 0) return null;
+        const u = rows[0];
+        return new User(u.id, u.username, u.email, u.password, u.favorite_team, u.total_score, u.games_played, u.highest_score, u.is_active);
+    }
+
+    static async findByEmail(email) {
+        const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
+        if (rows.length === 0) return null;
+        const u = rows[0];
+        return new User(u.id, u.username, u.email, u.password, u.favorite_team, u.total_score, u.games_played, u.highest_score, u.is_active);
+    }
+
+    static async findByUsername(username) {
+        const [rows] = await pool.execute('SELECT * FROM users WHERE username = ?', [username]);
+        if (rows.length === 0) return null;
+        const u = rows[0];
+        return new User(u.id, u.username, u.email, u.password, u.favorite_team, u.total_score, u.games_played, u.highest_score, u.is_active);
+    }
+
+    static async update(id, updateData) {
+        const fields = [];
+        const values = [];
+        for (const key in updateData) {
+            if (key === 'password') {
+                const hashedPassword = await bcrypt.hash(updateData[key], 12);
+                fields.push('password = ?');
+                values.push(hashedPassword);
+            } else if (key === 'favoriteTeam') {
+                fields.push('favorite_team = ?');
+                values.push(updateData[key]);
+            } else {
+                fields.push(`${key} = ?`);
+                values.push(updateData[key]);
             }
         }
+
+        if (fields.length === 0) {
+            return User.findById(id);
+        }
+
+        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+        values.push(id);
+
+        await pool.execute(sql, values);
+        return User.findById(id);
     }
-});
 
-// Instance methods
-User.prototype.validatePassword = async function(password) {
-    return bcrypt.compare(password, this.password);
-};
+    static async findAll({ where = {}, order = [], limit = null }) {
+        const whereClauses = [];
+        const whereValues = [];
+        for (const key in where) {
+            if (key === 'gamesPlayed') {
+                whereClauses.push('games_played > ?');
+                whereValues.push(where[key]['[Op.gt]']);
+            } else {
+                whereClauses.push(`${key} = ?`);
+                whereValues.push(where[key]);
+            }
+        }
+        const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+        const orderString = order.length > 0 ? `ORDER BY ${order.map(o => `${o[0]} ${o[1]}`).join(', ')}` : '';
+        const limitString = limit ? 'LIMIT ?' : '';
+        const limitValue = limit ? [limit] : [];
 
-User.prototype.toJSON = function() {
-    const values = { ...this.get() };
-    delete values.password;
-    return values;
-};
+        const sql = `SELECT * FROM users ${whereString} ${orderString} ${limitString}`;
+        const [rows] = await pool.execute(sql, [...whereValues, ...limitValue]);
+        return rows.map(u => new User(u.id, u.username, u.email, u.password, u.favorite_team, u.total_score, u.games_played, u.highest_score, u.is_active));
+    }
+}
 
 module.exports = User;
-
