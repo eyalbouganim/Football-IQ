@@ -1,5 +1,6 @@
 require('dotenv').config();
-const { sequelize, Question, User, syncDatabase } = require('../models');
+const bcrypt = require('bcrypt');
+const { pool } = require('../config/database');
 
 const footballQuestions = [
     // Easy Questions
@@ -215,38 +216,136 @@ const footballQuestions = [
     }
 ];
 
+const createGameTables = async () => {
+    console.log('🏗️  Creating Game System Tables...');
+    
+    // We drop these tables to ensure a clean slate (matching "force: true" behavior)
+    // Order matters because of Foreign Keys!
+    await pool.query('DROP TABLE IF EXISTS game_answers');
+    await pool.query('DROP TABLE IF EXISTS game_sessions');
+    await pool.query('DROP TABLE IF EXISTS questions');
+    await pool.query('DROP TABLE IF EXISTS users');
+
+    // 1. Users
+    await pool.query(`
+        CREATE TABLE users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) NOT NULL UNIQUE,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            favorite_team VARCHAR(100),
+            total_score INT DEFAULT 0,
+            games_played INT DEFAULT 0,
+            highest_score INT DEFAULT 0,
+            is_active BOOLEAN DEFAULT true,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `);
+
+    // 2. Questions
+    await pool.query(`
+        CREATE TABLE questions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            question TEXT NOT NULL,
+            options JSON NOT NULL,
+            correct_answer VARCHAR(500) NOT NULL,
+            difficulty ENUM('easy', 'medium', 'hard', 'expert') DEFAULT 'medium',
+            category VARCHAR(100) NOT NULL DEFAULT 'general',
+            points INT DEFAULT 10,
+            explanation TEXT,
+            sql_query TEXT,
+            is_active BOOLEAN DEFAULT true,
+            times_answered INT DEFAULT 0,
+            times_correct INT DEFAULT 0,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `);
+
+    // 3. Game Sessions
+    await pool.query(`
+        CREATE TABLE game_sessions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            score INT DEFAULT 0,
+            total_questions INT DEFAULT 0,
+            correct_answers INT DEFAULT 0,
+            difficulty ENUM('easy', 'medium', 'hard', 'expert', 'mixed') DEFAULT 'mixed',
+            status ENUM('in_progress', 'completed', 'abandoned') DEFAULT 'in_progress',
+            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP NULL,
+            time_spent_seconds INT,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `);
+
+    // 4. Game Answers
+    await pool.query(`
+        CREATE TABLE game_answers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            session_id INT NOT NULL,
+            question_id INT NOT NULL,
+            user_answer VARCHAR(500) NOT NULL,
+            is_correct BOOLEAN NOT NULL,
+            points_earned INT DEFAULT 0,
+            time_spent_seconds INT,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES game_sessions(id) ON DELETE CASCADE,
+            FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+        )
+    `);
+
+    console.log('✅ Game Tables created');
+};
+
 const seedDatabase = async () => {
     try {
         console.log('🌱 Starting database seeding...\n');
         
-        // Sync database (creates tables)
-        await syncDatabase(true); // force: true will drop existing tables
-        console.log('✅ Database tables created\n');
+        // 1. Create Tables
+        await createGameTables();
 
-        // Create demo user
-        const demoUser = await User.create({
-            username: 'demo',
-            email: 'demo@footballiq.com',
-            password: 'Demo@123!',
-            favoriteTeam: 'Manchester United'
-        });
-        console.log(`✅ Demo user created: ${demoUser.username}`);
+        // 2. Create Demo User
+        const hashedPassword = await bcrypt.hash('Demo@123!', 10);
+        await pool.query(`
+            INSERT INTO users (username, email, password, favorite_team) 
+            VALUES (?, ?, ?, ?)
+        `, ['demo', 'demo@footballiq.com', hashedPassword, 'Manchester United']);
+        
+        console.log(`✅ Demo user created: demo`);
 
-        // Create questions
+        // 3. Create Questions
         let created = 0;
         for (const q of footballQuestions) {
-            await Question.create(q);
+            await pool.query(`
+                INSERT INTO questions 
+                (question, options, correct_answer, difficulty, category, points, explanation, sql_query)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                q.question, 
+                JSON.stringify(q.options), // Convert Array to JSON string
+                q.correctAnswer, 
+                q.difficulty, 
+                q.category, 
+                q.points, 
+                q.explanation,
+                q.sqlQuery || null
+            ]);
             created++;
         }
         console.log(`✅ Created ${created} questions\n`);
 
-        // Summary
-        const questionCount = await Question.count();
-        const userCount = await User.count();
+        // 4. Summary
+        const [userCount] = await pool.query('SELECT COUNT(*) as count FROM users');
+        const [qCount] = await pool.query('SELECT COUNT(*) as count FROM questions');
         
         console.log('📊 Database Summary:');
-        console.log(`   - Users: ${userCount}`);
-        console.log(`   - Questions: ${questionCount}`);
+        console.log(`   - Users: ${userCount[0].count}`);
+        console.log(`   - Questions: ${qCount[0].count}`);
         console.log('\n✨ Seeding completed successfully!\n');
         
         console.log('🔐 Demo Account:');
@@ -266,4 +365,3 @@ if (require.main === module) {
 }
 
 module.exports = { seedDatabase, footballQuestions };
-
