@@ -14,6 +14,19 @@ class User {
         this.isActive = isActive;
     }
 
+    // Helper to map JS fields to DB columns
+    static toSnakeCase(str) {
+        const map = {
+            favoriteTeam: 'favorite_team',
+            totalScore: 'total_score',
+            gamesPlayed: 'games_played',
+            highestScore: 'highest_score',
+            isActive: 'is_active',
+            userId: 'id'
+        };
+        return map[str] || str;
+    }
+
     async validatePassword(password) {
         return bcrypt.compare(password, this.password);
     }
@@ -38,7 +51,7 @@ class User {
             'INSERT INTO users (username, email, password, favorite_team) VALUES (?, ?, ?, ?)',
             [username, email, hashedPassword, favoriteTeam]
         );
-        return new User(result.insertId, username, email, hashedPassword, favoriteTeam);
+        return new User(result.insertId, username, email, hashedPassword, favoriteTeam, 0, 0, 0, true);
     }
 
     static async findById(id) {
@@ -65,23 +78,21 @@ class User {
     static async update(id, updateData) {
         const fields = [];
         const values = [];
+        
         for (const key in updateData) {
             if (key === 'password') {
                 const hashedPassword = await bcrypt.hash(updateData[key], 12);
                 fields.push('password = ?');
                 values.push(hashedPassword);
-            } else if (key === 'favoriteTeam') {
-                fields.push('favorite_team = ?');
-                values.push(updateData[key]);
             } else {
-                fields.push(`${key} = ?`);
+                // FIXED: Automatically convert camelCase key to snake_case column
+                const dbCol = User.toSnakeCase(key);
+                fields.push(`${dbCol} = ?`);
                 values.push(updateData[key]);
             }
         }
 
-        if (fields.length === 0) {
-            return User.findById(id);
-        }
+        if (fields.length === 0) return User.findById(id);
 
         const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
         values.push(id);
@@ -93,22 +104,34 @@ class User {
     static async findAll({ where = {}, order = [], limit = null }) {
         const whereClauses = [];
         const whereValues = [];
+        
         for (const key in where) {
-            if (key === 'gamesPlayed') {
+            // FIXED: Map query keys (gamesPlayed) to DB columns (games_played)
+            const dbCol = User.toSnakeCase(key);
+            
+            if (key === 'gamesPlayed' && where[key]['[Op.gt]']) {
+                // Handle special operator manually if needed
                 whereClauses.push('games_played > ?');
                 whereValues.push(where[key]['[Op.gt]']);
             } else {
-                whereClauses.push(`${key} = ?`);
+                whereClauses.push(`${dbCol} = ?`);
                 whereValues.push(where[key]);
             }
         }
+        
         const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-        const orderString = order.length > 0 ? `ORDER BY ${order.map(o => `${o[0]} ${o[1]}`).join(', ')}` : '';
+        
+        // FIXED: Handle order mapping (e.g. [['highestScore', 'DESC']])
+        const orderString = order.length > 0 
+            ? `ORDER BY ${order.map(o => `${User.toSnakeCase(o[0])} ${o[1]}`).join(', ')}` 
+            : '';
+            
         const limitString = limit ? 'LIMIT ?' : '';
         const limitValue = limit ? [limit] : [];
 
         const sql = `SELECT * FROM users ${whereString} ${orderString} ${limitString}`;
         const [rows] = await pool.execute(sql, [...whereValues, ...limitValue]);
+        
         return rows.map(u => new User(u.id, u.username, u.email, u.password, u.favorite_team, u.total_score, u.games_played, u.highest_score, u.is_active));
     }
 }

@@ -6,20 +6,17 @@ const startGame = async (req, res, next) => {
         const { difficulty = 'mixed', questionCount = 10 } = req.body;
         const userId = req.userId;
 
-        // Validate question count
+        // Ensure count is valid
         const count = Math.min(Math.max(parseInt(questionCount) || 10, 5), 20);
 
-        // Get questions based on difficulty
+        // Model will translate 'isActive' -> 'is_active'
         const whereClause = { isActive: true };
         if (difficulty !== 'mixed') {
             whereClause.difficulty = difficulty;
         }
 
-        const questions = await Question.findAll({
-            where: whereClause,
-            order: 'random',
-            limit: count,
-        });
+        // Use our new random finder
+        const questions = await Question.findRandom(count, difficulty);
 
         if (questions.length === 0) {
             return next(new AppError('No questions available for this difficulty', 404));
@@ -60,18 +57,18 @@ const submitAnswer = async (req, res, next) => {
         const { questionId, answer, timeSpent } = req.body;
         const userId = req.userId;
 
-        // Verify session
+        // Verify session (Model translates 'userId' -> 'user_id')
         const session = await GameSession.findOne({
-            where: { id: sessionId, user_id: userId, status: 'in_progress' }
+            where: { id: sessionId, userId: userId, status: 'in_progress' }
         });
 
         if (!session) {
             return next(new AppError('Game session not found or already completed', 404));
         }
 
-        // Check if already answered
+        // Check if already answered (Model translates 'sessionId' -> 'session_id')
         const existingAnswer = await GameAnswer.findOne({
-            where: { session_id: sessionId, question_id: questionId }
+            where: { sessionId: sessionId, questionId: questionId }
         });
 
         if (existingAnswer) {
@@ -105,10 +102,11 @@ const submitAnswer = async (req, res, next) => {
         
         await GameSession.update(sessionId, { score: newScore, correctAnswers: newCorrectAnswers });
 
-
         // Update question statistics
-        const newTimesAnswered = question.timesAnswered + 1;
-        const newTimesCorrect = isCorrect ? question.timesCorrect + 1 : question.timesCorrect;
+        const newTimesAnswered = (question.timesAnswered || 0) + 1;
+        const newTimesCorrect = isCorrect ? (question.timesCorrect || 0) + 1 : (question.timesCorrect || 0);
+        
+        // Model translates 'timesAnswered' -> 'times_answered'
         await Question.update(questionId, { timesAnswered: newTimesAnswered, timesCorrect: newTimesCorrect });
 
         const updatedSession = await GameSession.findById(sessionId);
@@ -135,7 +133,7 @@ const endGame = async (req, res, next) => {
         const userId = req.userId;
 
         const session = await GameSession.findOne({
-            where: { id: sessionId, user_id: userId },
+            where: { id: sessionId, userId: userId },
         });
 
         if (!session) {
@@ -154,12 +152,11 @@ const endGame = async (req, res, next) => {
         const newGamesPlayed = user.gamesPlayed + 1;
         const newTotalScore = user.totalScore + session.score;
         const newHighestScore = session.score > user.highestScore ? session.score : user.highestScore;
+        
+        // Model translates 'gamesPlayed' -> 'games_played'
         await User.update(userId, { gamesPlayed: newGamesPlayed, totalScore: newTotalScore, highestScore: newHighestScore });
 
         const updatedSession = await GameSession.findById(sessionId);
-
-        // For simplicity, we are not fetching all answers here.
-        // This would require a new method in GameAnswer model.
 
         res.json({
             success: true,
@@ -172,8 +169,7 @@ const endGame = async (req, res, next) => {
                 accuracy: updatedSession.totalQuestions > 0
                     ? Math.round((updatedSession.correctAnswers / updatedSession.totalQuestions) * 100)
                     : 0,
-                timeSpentSeconds: updatedSession.timeSpentSeconds,
-                answers: [] // Simplified
+                timeSpentSeconds: updatedSession.timeSpentSeconds
             }
         });
     } catch (error) {
@@ -187,8 +183,9 @@ const getLeaderboard = async (req, res, next) => {
         const count = Math.min(parseInt(limit) || 10, 100);
 
         if (period === 'all') {
+            // FIX: Use camelCase 'gamesPlayed' so User.findAll logic triggers correctly
             const users = await User.findAll({
-                where: { isActive: true, 'games_played': { '[Op.gt]': 0 } },
+                where: { isActive: true, 'gamesPlayed': { '[Op.gt]': 0 } },
                 order: [['highestScore', 'DESC']],
                 limit: count,
             });
@@ -216,6 +213,7 @@ const getLeaderboard = async (req, res, next) => {
             dateFilter = { completedAt: { '[Op.gte]': new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
         }
 
+        // Model translates keys to snake_case automatically
         const results = await GameSession.findAll({
             where: {
                 status: 'completed',
@@ -229,15 +227,14 @@ const getLeaderboard = async (req, res, next) => {
             const user = await User.findById(r.userId);
             return {
                 rank: i + 1,
-                username: user.username,
-                favoriteTeam: user.favoriteTeam,
+                username: user ? user.username : 'Unknown',
+                favoriteTeam: user ? user.favoriteTeam : '-',
                 score: r.score,
                 correctAnswers: r.correctAnswers,
                 totalQuestions: r.totalQuestions,
                 completedAt: r.completedAt
             };
         }));
-
 
         res.json({
             success: true,
@@ -296,6 +293,7 @@ const getUserStats = async (req, res, next) => {
     }
 };
 
+// FIX: Export the functions directly. Do NOT use require() here.
 module.exports = {
     startGame,
     submitAnswer,

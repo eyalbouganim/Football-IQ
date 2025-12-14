@@ -36,3 +36,6 @@ pid
 *.swp
 *.swo
 *.tgz
+
+# CSV data files
+*.csv
