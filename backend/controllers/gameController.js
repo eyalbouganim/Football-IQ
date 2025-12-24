@@ -183,10 +183,10 @@ const getLeaderboard = async (req, res, next) => {
         const count = Math.min(parseInt(limit) || 10, 100);
 
         if (period === 'all') {
-            // FIX: Use camelCase 'gamesPlayed' so User.findAll logic triggers correctly
+            // Include all active users in leaderboard
             const users = await User.findAll({
-                where: { isActive: true, 'gamesPlayed': { '[Op.gt]': 0 } },
-                order: [['highestScore', 'DESC']],
+                where: { isActive: true },
+                order: [['totalScore', 'DESC']],
                 limit: count,
             });
 
