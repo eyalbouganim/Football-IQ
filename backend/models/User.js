@@ -106,31 +106,35 @@ class User {
         const whereValues = [];
         
         for (const key in where) {
-            // FIXED: Map query keys (gamesPlayed) to DB columns (games_played)
+            // Map query keys (gamesPlayed) to DB columns (games_played)
             const dbCol = User.toSnakeCase(key);
+            let value = where[key];
             
-            if (key === 'gamesPlayed' && where[key]['[Op.gt]']) {
-                // Handle special operator manually if needed
-                whereClauses.push('games_played > ?');
-                whereValues.push(where[key]['[Op.gt]']);
+            // Handle special operators like { '[Op.gt]': 0 }
+            if (typeof value === 'object' && value !== null && '[Op.gt]' in value) {
+                whereClauses.push(`${dbCol} > ?`);
+                whereValues.push(value['[Op.gt]']);
             } else {
+                // Convert booleans to 1/0 for MySQL
+                if (typeof value === 'boolean') {
+                    value = value ? 1 : 0;
+                }
                 whereClauses.push(`${dbCol} = ?`);
-                whereValues.push(where[key]);
+                whereValues.push(value);
             }
         }
         
         const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
         
-        // FIXED: Handle order mapping (e.g. [['highestScore', 'DESC']])
+        // Handle order mapping (e.g. [['highestScore', 'DESC']])
         const orderString = order.length > 0 
             ? `ORDER BY ${order.map(o => `${User.toSnakeCase(o[0])} ${o[1]}`).join(', ')}` 
             : '';
             
-        const limitString = limit ? 'LIMIT ?' : '';
-        const limitValue = limit ? [limit] : [];
+        const limitString = limit ? `LIMIT ${parseInt(limit)}` : '';
 
         const sql = `SELECT * FROM users ${whereString} ${orderString} ${limitString}`;
-        const [rows] = await pool.execute(sql, [...whereValues, ...limitValue]);
+        const [rows] = await pool.execute(sql, whereValues);
         
         return rows.map(u => new User(u.id, u.username, u.email, u.password, u.favorite_team, u.total_score, u.games_played, u.highest_score, u.is_active));
     }
