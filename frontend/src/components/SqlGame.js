@@ -1,32 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Layout, Menu, Card, Button, Table, message, Select, Tag, 
-    Collapse, Spin, Typography, Row, Col, Tabs, Alert, Tooltip
+    Layout, Card, Button, Table, message, Select, Tag, 
+    Collapse, Spin, Typography, Row, Col, Alert
 } from 'antd';
 import {
-    DashboardOutlined,
     CodeOutlined,
-    TrophyOutlined,
-    DatabaseOutlined,
     PlayCircleOutlined,
     CheckCircleOutlined,
-    CloseCircleOutlined,
     BulbOutlined,
     HomeOutlined,
-    TableOutlined
+    TableOutlined,
+    DatabaseOutlined,
+    StarOutlined,
+    FireOutlined,
+    RocketOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { sqlAPI } from '../services/api';
+import { sqlQueryAPI, sqlAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const { Sider, Content } = Layout;
+const { Content } = Layout;
 const { Option } = Select;
 const { Panel } = Collapse;
 const { Text, Title } = Typography;
-const { TabPane } = Tabs;
 
 const SqlGame = () => {
-    const [collapsed, setCollapsed] = useState(false);
     const [challenges, setChallenges] = useState([]);
     const [selectedChallenge, setSelectedChallenge] = useState(null);
     const [schema, setSchema] = useState(null);
@@ -38,7 +36,7 @@ const SqlGame = () => {
     const [feedback, setFeedback] = useState(null);
     const [difficulty, setDifficulty] = useState('all');
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const { user } = useAuth();
 
     useEffect(() => {
         fetchChallenges();
@@ -49,7 +47,7 @@ const SqlGame = () => {
         setLoading(true);
         try {
             const params = difficulty !== 'all' ? { difficulty } : {};
-            const response = await sqlAPI.getChallenges(params);
+            const response = await sqlQueryAPI.getChallenges(params);
             setChallenges(response.data.data.challenges);
         } catch (error) {
             message.error('Failed to load challenges');
@@ -67,11 +65,16 @@ const SqlGame = () => {
         }
     };
 
-    const selectChallenge = (challenge) => {
-        setSelectedChallenge(challenge);
-        setQuery('');
-        setResults(null);
-        setFeedback(null);
+    const selectChallenge = async (challenge) => {
+        try {
+            const response = await sqlQueryAPI.getChallenge(challenge.id);
+            setSelectedChallenge(response.data.data);
+            setQuery('');
+            setResults(null);
+            setFeedback(null);
+        } catch (error) {
+            message.error('Failed to load challenge details');
+        }
     };
 
     const executeQuery = async () => {
@@ -83,7 +86,7 @@ const SqlGame = () => {
         setResults(null);
         setFeedback(null);
         try {
-            const response = await sqlAPI.executeQuery(query);
+            const response = await sqlQueryAPI.executeQuery(query);
             setResults(response.data.data);
         } catch (error) {
             setFeedback({
@@ -102,20 +105,24 @@ const SqlGame = () => {
         }
         setSubmitting(true);
         try {
-            const response = await sqlAPI.submitChallenge(selectedChallenge.id, query);
+            const response = await sqlQueryAPI.submitQuery(selectedChallenge.id, query);
             const data = response.data.data;
             setFeedback({
                 type: data.isCorrect ? 'success' : 'warning',
                 message: data.feedback,
-                points: data.points,
+                points: data.pointsEarned,
                 hint: data.hint,
-                expectedSample: data.expectedSample
+                solution: data.solution
             });
             if (data.userResults) {
-                setResults({ results: data.userResults, columns: Object.keys(data.userResults[0] || {}) });
+                setResults({ 
+                    results: data.userResults, 
+                    columns: data.userResults.length > 0 ? Object.keys(data.userResults[0]) : [],
+                    rowCount: data.userResults.length
+                });
             }
             if (data.isCorrect) {
-                message.success(`🎉 Correct! +${data.points} points`);
+                message.success(`🎉 Correct! +${data.pointsEarned} points`);
             }
         } catch (error) {
             setFeedback({
@@ -128,288 +135,298 @@ const SqlGame = () => {
     };
 
     const getDifficultyColor = (diff) => {
-        const colors = { easy: 'green', medium: 'orange', hard: 'red', expert: 'purple' };
-        return colors[diff] || 'default';
+        const colors = { basic: '#52c41a', medium: '#faad14', hard: '#ff4d4f' };
+        return colors[diff] || '#1890ff';
     };
 
-    const menuItems = [
-        { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-        { key: 'sql', icon: <CodeOutlined />, label: 'SQL Challenges' },
-        { key: 'leaderboard', icon: <TrophyOutlined />, label: 'Leaderboard' },
-    ];
-
-    const handleMenuClick = ({ key }) => {
-        if (key === 'dashboard') navigate('/dashboard');
-        if (key === 'leaderboard') navigate('/leaderboard');
+    const getDifficultyIcon = (diff) => {
+        if (diff === 'basic') return <StarOutlined />;
+        if (diff === 'medium') return <FireOutlined />;
+        if (diff === 'hard') return <RocketOutlined />;
+        return <CodeOutlined />;
     };
 
     return (
-        <Layout style={{ minHeight: '100vh' }}>
-            <Sider
-                collapsible
-                collapsed={collapsed}
-                onCollapse={setCollapsed}
-                className="sidebar"
-                breakpoint="lg"
-            >
-                <div className="logo-container">
-                    <h2>⚽ {!collapsed && 'Football-IQ'}</h2>
-                    {!collapsed && <span>SQL Challenges</span>}
+        <Layout style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+            <Content style={{ padding: '24px' }}>
+                {/* Header */}
+                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <Title level={2} style={{ color: '#fff', margin: 0 }}>
+                            ✍️ SQL Query Challenge
+                        </Title>
+                        <Text type="secondary">Write your own SQL queries to solve challenges</Text>
+                    </div>
+                    <Button icon={<HomeOutlined />} onClick={() => navigate('/dashboard')}>
+                        Dashboard
+                    </Button>
                 </div>
-                <Menu
-                    theme="dark"
-                    mode="inline"
-                    selectedKeys={['sql']}
-                    items={menuItems}
-                    onClick={handleMenuClick}
-                />
-            </Sider>
 
-            <Layout>
-                <Content style={{ padding: '24px', overflow: 'auto' }}>
-                    <Row gutter={24}>
-                        {/* Left Panel - Challenge List */}
-                        <Col xs={24} lg={8}>
-                            <Card 
-                                title={
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span><DatabaseOutlined /> SQL Challenges</span>
-                                        <Select 
-                                            value={difficulty} 
-                                            onChange={setDifficulty} 
-                                            size="small"
-                                            style={{ width: 100 }}
-                                        >
-                                            <Option value="all">All</Option>
-                                            <Option value="easy">Easy</Option>
-                                            <Option value="medium">Medium</Option>
-                                            <Option value="hard">Hard</Option>
-                                            <Option value="expert">Expert</Option>
-                                        </Select>
-                                    </div>
-                                }
-                                style={{ marginBottom: 16 }}
-                                bodyStyle={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}
-                            >
-                                <Spin spinning={loading}>
-                                    {challenges.map((challenge) => (
-                                        <Card
-                                            key={challenge.id}
-                                            size="small"
-                                            style={{ 
-                                                marginBottom: 8, 
-                                                cursor: 'pointer',
-                                                border: selectedChallenge?.id === challenge.id 
-                                                    ? '2px solid var(--primary)' 
-                                                    : '1px solid rgba(255,255,255,0.1)'
-                                            }}
-                                            onClick={() => selectChallenge(challenge)}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                                <div>
-                                                    <Text strong style={{ color: '#fff' }}>{challenge.title}</Text>
-                                                    <br />
-                                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                                        {challenge.category}
-                                                    </Text>
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <Tag color={getDifficultyColor(challenge.difficulty)}>
-                                                        {challenge.difficulty}
-                                                    </Tag>
-                                                    <br />
-                                                    <Text style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                                                        {challenge.points} pts
-                                                    </Text>
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </Spin>
-                            </Card>
-                        </Col>
-
-                        {/* Right Panel - Query Editor & Results */}
-                        <Col xs={24} lg={16}>
-                            {selectedChallenge ? (
-                                <>
-                                    {/* Challenge Description */}
-                                    <Card style={{ marginBottom: 16 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
-                                            <div>
-                                                <Title level={4} style={{ margin: 0, color: '#fff' }}>
-                                                    {selectedChallenge.title}
-                                                </Title>
-                                                <Tag color={getDifficultyColor(selectedChallenge.difficulty)} style={{ marginTop: 8 }}>
-                                                    {selectedChallenge.difficulty}
-                                                </Tag>
-                                                <Tag color="blue">{selectedChallenge.category}</Tag>
-                                                <Tag color="gold">{selectedChallenge.points} points</Tag>
-                                            </div>
-                                        </div>
-                                        <Text style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: 12 }}>
-                                            {selectedChallenge.description}
-                                        </Text>
-                                        <Collapse ghost>
-                                            <Panel header={<><TableOutlined /> Schema Reference</>} key="schema">
-                                                <pre style={{ 
-                                                    background: 'rgba(0,0,0,0.3)', 
-                                                    padding: 12, 
-                                                    borderRadius: 8,
-                                                    fontSize: 12,
-                                                    overflow: 'auto'
-                                                }}>
-                                                    {selectedChallenge.schema}
-                                                </pre>
-                                            </Panel>
-                                            <Panel header={<><BulbOutlined /> Hint</>} key="hint">
-                                                <Text type="secondary">{selectedChallenge.hint}</Text>
-                                            </Panel>
-                                        </Collapse>
-                                    </Card>
-
-                                    {/* SQL Editor */}
-                                    <Card 
-                                        title={<><CodeOutlined /> SQL Query Editor</>}
-                                        style={{ marginBottom: 16 }}
+                <Row gutter={24}>
+                    {/* Left Panel - Challenge List */}
+                    <Col xs={24} lg={8}>
+                        <Card 
+                            title={
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span><DatabaseOutlined /> Challenges</span>
+                                    <Select 
+                                        value={difficulty} 
+                                        onChange={setDifficulty} 
+                                        size="small"
+                                        style={{ width: 100 }}
                                     >
-                                        <textarea
-                                            value={query}
-                                            onChange={(e) => setQuery(e.target.value)}
-                                            placeholder="Write your SQL query here...
-
-Example:
-SELECT column_name, COUNT(*) as count
-FROM table_name
-GROUP BY column_name
-ORDER BY count DESC;"
-                                            style={{
-                                                width: '100%',
-                                                height: 200,
-                                                background: 'rgba(0,0,0,0.4)',
-                                                border: '1px solid var(--bg-elevated)',
-                                                borderRadius: 8,
-                                                padding: 16,
-                                                color: '#00d9a5',
-                                                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                                                fontSize: 14,
-                                                resize: 'vertical'
-                                            }}
-                                        />
-                                        <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
-                                            <Button 
-                                                type="default" 
-                                                icon={<PlayCircleOutlined />}
-                                                onClick={executeQuery}
-                                                loading={executing}
-                                            >
-                                                Run Query
-                                            </Button>
-                                            <Button 
-                                                type="primary" 
-                                                icon={<CheckCircleOutlined />}
-                                                onClick={submitAnswer}
-                                                loading={submitting}
-                                            >
-                                                Submit Answer
-                                            </Button>
+                                        <Option value="all">All</Option>
+                                        <Option value="basic">Basic</Option>
+                                        <Option value="medium">Medium</Option>
+                                        <Option value="hard">Hard</Option>
+                                    </Select>
+                                </div>
+                            }
+                            style={{ marginBottom: 16, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}
+                            bodyStyle={{ maxHeight: 'calc(100vh - 280px)', overflow: 'auto' }}
+                        >
+                            <Spin spinning={loading}>
+                                {challenges.map((challenge) => (
+                                    <Card
+                                        key={challenge.id}
+                                        size="small"
+                                        style={{ 
+                                            marginBottom: 8, 
+                                            cursor: 'pointer',
+                                            border: selectedChallenge?.id === challenge.id 
+                                                ? '2px solid var(--primary)' 
+                                                : '1px solid var(--bg-elevated)',
+                                            background: selectedChallenge?.id === challenge.id 
+                                                ? 'rgba(0,217,165,0.1)' 
+                                                : 'transparent'
+                                        }}
+                                        onClick={() => selectChallenge(challenge)}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                            <div>
+                                                <Text strong style={{ color: '#fff' }}>{challenge.title}</Text>
+                                                <br />
+                                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                                    {challenge.category}
+                                                </Text>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <Tag 
+                                                    icon={getDifficultyIcon(challenge.difficulty)}
+                                                    color={getDifficultyColor(challenge.difficulty)}
+                                                >
+                                                    {challenge.difficulty}
+                                                </Tag>
+                                                <br />
+                                                <Text style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                                                    {challenge.points} pts
+                                                </Text>
+                                            </div>
                                         </div>
                                     </Card>
+                                ))}
+                            </Spin>
+                        </Card>
 
-                                    {/* Feedback */}
-                                    {feedback && (
-                                        <Alert
-                                            type={feedback.type}
-                                            message={
-                                                feedback.type === 'success' 
-                                                    ? `✅ ${feedback.message} (+${feedback.points} points)`
-                                                    : feedback.message
-                                            }
-                                            description={
-                                                feedback.hint && (
-                                                    <div style={{ marginTop: 8 }}>
-                                                        <strong>Hint:</strong> {feedback.hint}
-                                                    </div>
-                                                )
-                                            }
-                                            style={{ marginBottom: 16 }}
-                                            showIcon
-                                        />
-                                    )}
-
-                                    {/* Results Table */}
-                                    {results && (
-                                        <Card 
-                                            title={
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span>Query Results</span>
-                                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                                        {results.rowCount} rows {results.truncated ? '(truncated)' : ''} • {results.executionTime}
-                                                    </Text>
-                                                </div>
-                                            }
+                        {/* Schema Reference */}
+                        {schema && (
+                            <Card 
+                                title={<><TableOutlined /> Database Schema</>}
+                                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}
+                                bodyStyle={{ maxHeight: 300, overflow: 'auto' }}
+                            >
+                                <Collapse ghost size="small">
+                                    {schema.tables.map(table => (
+                                        <Panel 
+                                            header={<Text style={{ color: '#fff' }}>{table.name}</Text>} 
+                                            key={table.name}
                                         >
-                                            <div style={{ overflow: 'auto' }}>
-                                                <Table
-                                                    dataSource={results.results?.map((row, i) => ({ key: i, ...row }))}
-                                                    columns={results.columns?.map(col => ({
-                                                        title: col,
-                                                        dataIndex: col,
-                                                        key: col,
-                                                        ellipsis: true,
-                                                        render: (val) => val === null ? <Text type="secondary">NULL</Text> : String(val)
-                                                    }))}
-                                                    size="small"
-                                                    pagination={{ pageSize: 10 }}
-                                                    scroll={{ x: true }}
-                                                />
-                                            </div>
-                                        </Card>
-                                    )}
-                                </>
-                            ) : (
-                                <Card style={{ textAlign: 'center', padding: 60 }}>
-                                    <DatabaseOutlined style={{ fontSize: 64, color: 'var(--primary)', opacity: 0.5 }} />
-                                    <Title level={3} style={{ marginTop: 24 }}>Select a Challenge</Title>
-                                    <Text type="secondary">
-                                        Choose a SQL challenge from the left panel to start practicing your aggregation queries.
-                                    </Text>
-
-                                    {/* Quick Schema Reference */}
-                                    {schema && (
-                                        <div style={{ marginTop: 32, textAlign: 'left' }}>
-                                            <Title level={5}>📊 Database Tables</Title>
-                                            <Collapse ghost>
-                                                {schema.tables.map(table => (
-                                                    <Panel 
-                                                        header={<><TableOutlined /> {table.name}</>} 
-                                                        key={table.name}
-                                                    >
-                                                        <Text type="secondary">{table.description}</Text>
-                                                        <div style={{ marginTop: 8 }}>
-                                                            {table.columns.slice(0, 6).map(col => (
-                                                                <Tag key={col.name} style={{ margin: 2 }}>
-                                                                    {col.name}
-                                                                </Tag>
-                                                            ))}
-                                                            {table.columns.length > 6 && (
-                                                                <Tag>+{table.columns.length - 6} more</Tag>
-                                                            )}
-                                                        </div>
-                                                    </Panel>
+                                            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                                                {table.description}
+                                            </Text>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                                {table.columns.map(col => (
+                                                    <Tag key={col} style={{ fontSize: 10 }}>{col}</Tag>
                                                 ))}
-                                            </Collapse>
+                                            </div>
+                                        </Panel>
+                                    ))}
+                                </Collapse>
+                            </Card>
+                        )}
+                    </Col>
+
+                    {/* Right Panel - Query Editor & Results */}
+                    <Col xs={24} lg={16}>
+                        {selectedChallenge ? (
+                            <>
+                                {/* Challenge Description */}
+                                <Card style={{ marginBottom: 16, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}>
+                                    <div style={{ marginBottom: 16 }}>
+                                        <Title level={4} style={{ margin: 0, color: '#fff' }}>
+                                            {selectedChallenge.title}
+                                        </Title>
+                                        <div style={{ marginTop: 8 }}>
+                                            <Tag 
+                                                icon={getDifficultyIcon(selectedChallenge.difficulty)}
+                                                color={getDifficultyColor(selectedChallenge.difficulty)}
+                                            >
+                                                {selectedChallenge.difficulty}
+                                            </Tag>
+                                            <Tag color="blue">{selectedChallenge.category}</Tag>
+                                            <Tag color="gold">{selectedChallenge.points} points</Tag>
+                                        </div>
+                                    </div>
+                                    <Text style={{ color: 'var(--text-secondary)' }}>
+                                        {selectedChallenge.description}
+                                    </Text>
+                                    
+                                    {selectedChallenge.table && (
+                                        <div style={{ marginTop: 12 }}>
+                                            <Text type="secondary">Tables: </Text>
+                                            {selectedChallenge.table.split(',').map(t => (
+                                                <Tag key={t} color="cyan">{t.trim()}</Tag>
+                                            ))}
                                         </div>
                                     )}
                                 </Card>
-                            )}
-                        </Col>
-                    </Row>
-                </Content>
-            </Layout>
+
+                                {/* SQL Editor */}
+                                <Card 
+                                    title={<><CodeOutlined /> SQL Query Editor</>}
+                                    style={{ marginBottom: 16, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}
+                                >
+                                    <textarea
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder={`Write your SQL query here...\n\nExample:\nSELECT column_name, COUNT(*) as count\nFROM table_name\nGROUP BY column_name\nORDER BY count DESC;`}
+                                        style={{
+                                            width: '100%',
+                                            height: 200,
+                                            background: 'rgba(0,0,0,0.4)',
+                                            border: '1px solid var(--bg-elevated)',
+                                            borderRadius: 8,
+                                            padding: 16,
+                                            color: '#00d9a5',
+                                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                            fontSize: 14,
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                    <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                                        <Button 
+                                            type="default" 
+                                            icon={<PlayCircleOutlined />}
+                                            onClick={executeQuery}
+                                            loading={executing}
+                                        >
+                                            Run Query
+                                        </Button>
+                                        <Button 
+                                            type="primary" 
+                                            icon={<CheckCircleOutlined />}
+                                            onClick={submitAnswer}
+                                            loading={submitting}
+                                        >
+                                            Submit Answer
+                                        </Button>
+                                        <Button 
+                                            type="dashed" 
+                                            icon={<BulbOutlined />}
+                                            onClick={() => message.info(selectedChallenge.hint)}
+                                        >
+                                            Hint
+                                        </Button>
+                                    </div>
+                                </Card>
+
+                                {/* Feedback */}
+                                {feedback && (
+                                    <Alert
+                                        type={feedback.type}
+                                        message={feedback.message}
+                                        description={
+                                            <>
+                                                {feedback.hint && (
+                                                    <div style={{ marginTop: 8 }}>
+                                                        <strong>💡 Hint:</strong> {feedback.hint}
+                                                    </div>
+                                                )}
+                                                {feedback.solution && (
+                                                    <div style={{ marginTop: 8 }}>
+                                                        <strong>✅ Solution:</strong>
+                                                        <pre style={{ 
+                                                            background: 'rgba(0,0,0,0.2)', 
+                                                            padding: 8, 
+                                                            borderRadius: 4,
+                                                            marginTop: 4,
+                                                            fontSize: 12,
+                                                            color: '#00d9a5'
+                                                        }}>
+                                                            {feedback.solution}
+                                                        </pre>
+                                                    </div>
+                                                )}
+                                            </>
+                                        }
+                                        style={{ marginBottom: 16 }}
+                                        showIcon
+                                    />
+                                )}
+
+                                {/* Results Table */}
+                                {results && (
+                                    <Card 
+                                        title={
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>Query Results</span>
+                                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                                    {results.rowCount} rows {results.truncated ? '(truncated)' : ''} 
+                                                    {results.executionTime && ` • ${results.executionTime}`}
+                                                </Text>
+                                            </div>
+                                        }
+                                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}
+                                    >
+                                        <div style={{ overflow: 'auto' }}>
+                                            <Table
+                                                dataSource={results.results?.map((row, i) => ({ key: i, ...row }))}
+                                                columns={results.columns?.map(col => ({
+                                                    title: col,
+                                                    dataIndex: col,
+                                                    key: col,
+                                                    ellipsis: true,
+                                                    render: (val) => val === null ? <Text type="secondary">NULL</Text> : String(val)
+                                                }))}
+                                                size="small"
+                                                pagination={{ pageSize: 10 }}
+                                                scroll={{ x: true }}
+                                            />
+                                        </div>
+                                    </Card>
+                                )}
+                            </>
+                        ) : (
+                            <Card style={{ textAlign: 'center', padding: 60, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}>
+                                <CodeOutlined style={{ fontSize: 64, color: 'var(--primary)', opacity: 0.5 }} />
+                                <Title level={3} style={{ marginTop: 24, color: '#fff' }}>Select a Challenge</Title>
+                                <Text type="secondary">
+                                    Choose a challenge from the left panel to start writing SQL queries.
+                                </Text>
+                                {user && (
+                                    <div style={{ marginTop: 24, padding: 16, background: 'rgba(0,217,165,0.1)', borderRadius: 8 }}>
+                                        <Text style={{ color: 'var(--primary)' }}>
+                                            💰 Your Score: <strong>{user.totalScore || 0}</strong> points
+                                        </Text>
+                                    </div>
+                                )}
+                            </Card>
+                        )}
+                    </Col>
+                </Row>
+            </Content>
         </Layout>
     );
 };
 
 export default SqlGame;
-

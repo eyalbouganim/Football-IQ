@@ -1,17 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const sqlController = require('../controllers/sqlController');
-const { authenticate, optionalAuth } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
-// Public routes
+// ========================================
+// SHARED ROUTES (Public)
+// ========================================
 router.get('/schema', sqlController.getSchema);
-router.get('/challenges', sqlController.getChallenges);
-router.get('/challenges/:id', sqlController.getChallenge);
-router.get('/leaderboard', sqlController.getSqlLeaderboard);
+router.get('/leaderboard', sqlController.getLeaderboard);
 
-// Protected routes (require login)
-router.post('/execute', authenticate, sqlController.executeQuery);
-router.post('/challenges/:id/submit', authenticate, sqlController.submitChallenge);
+// ========================================
+// 🎯 QUIZ MODE - Multiple Choice (American Style)
+// ========================================
+router.get('/quiz/challenges', sqlController.getQuizChallenges);
+router.get('/quiz/start', authenticate, sqlController.startQuizGame);
+router.post('/quiz/:id/submit', authenticate, sqlController.submitQuizAnswer);
+
+// ========================================
+// ✍️ QUERY MODE - Write Your Own SQL
+// ========================================
+router.get('/query/challenges', sqlController.getQueryChallenges);
+router.get('/query/challenges/:id', sqlController.getQueryChallenge);
+router.post('/query/:id/submit', authenticate, sqlController.submitQueryAnswer);
+router.post('/query/execute', authenticate, sqlController.executeQuery);
 
 module.exports = router;
-

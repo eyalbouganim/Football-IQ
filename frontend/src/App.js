@@ -8,6 +8,7 @@ import Game from './components/Game';
 import Dashboard from './components/Dashboard';
 import Leaderboard from './components/Leaderboard';
 import SqlGame from './components/SqlGame';
+import SqlQuiz from './components/SqlQuiz';
 import './App.css';
 
 // Custom theme configuration
@@ -106,6 +107,14 @@ const AppRoutes = () => {
                 element={
                     <ProtectedRoute>
                         <SqlGame />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/sql-quiz"
+                element={
+                    <ProtectedRoute>
+                        <SqlQuiz />
                     </ProtectedRoute>
                 }
             />

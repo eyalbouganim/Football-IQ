@@ -77,3 +77,5 @@ const validateAnswer = (req, res, next) => {
 
 module.exports = { validateRegistration, validateLogin, validateAnswer };
 
+
+

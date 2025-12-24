@@ -50,16 +50,19 @@ const Dashboard = () => {
 
     const menuItems = [
         { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-        { key: 'sql', icon: <CodeOutlined />, label: 'SQL Challenges' },
-        { key: 'play', icon: <PlayCircleOutlined />, label: 'Trivia Quiz' },
+        { key: 'sql-quiz', icon: <PlayCircleOutlined />, label: '🇺🇸 SQL Quiz' },
+        { key: 'sql', icon: <CodeOutlined />, label: '✍️ SQL Challenge' },
+        { key: 'play', icon: <StarOutlined />, label: '🎯 Trivia' },
         { key: 'leaderboard', icon: <TrophyOutlined />, label: 'Leaderboard' },
-        { key: 'profile', icon: <UserOutlined />, label: 'Profile' },
         { type: 'divider' },
         { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true },
     ];
 
     const handleMenuClick = ({ key }) => {
         switch (key) {
+            case 'sql-quiz':
+                navigate('/sql-quiz');
+                break;
             case 'sql':
                 navigate('/sql');
                 break;
@@ -118,52 +121,72 @@ const Dashboard = () => {
                         </p>
                     </div>
 
-                    {/* SQL Challenges Card */}
-                    <Card 
-                        style={{ 
-                            marginBottom: 24,
-                            background: 'linear-gradient(135deg, rgba(0, 217, 165, 0.2) 0%, rgba(19, 47, 76, 0.9) 100%)',
-                            border: '1px solid rgba(0, 217, 165, 0.3)'
-                        }}
-                    >
-                        <Row align="middle" justify="space-between">
-                            <Col>
-                                <h2 style={{ margin: 0, marginBottom: 8 }}>⚡ SQL Challenges</h2>
-                                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-                                    Master SQL with real football data - GROUP BY, JOINs, aggregations & more!
-                                </p>
-                            </Col>
-                            <Col>
-                                <Button 
-                                    type="primary" 
-                                    size="large"
-                                    icon={<CodeOutlined />}
-                                    onClick={() => navigate('/sql')}
-                                    style={{ 
-                                        height: 48,
-                                        paddingLeft: 32,
-                                        paddingRight: 32,
-                                        fontSize: 16,
-                                        fontWeight: 600
-                                    }}
-                                >
-                                    Start Challenges
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Card>
+                    {/* Game Selection */}
+                    <h2 style={{ marginBottom: 16, color: '#fff' }}>🎮 Choose Your Game</h2>
+                    
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                        {/* SQL Quiz - American Style */}
+                        <Col xs={24} md={12}>
+                            <Card 
+                                hoverable
+                                style={{ 
+                                    height: '100%',
+                                    background: 'linear-gradient(135deg, rgba(0, 217, 165, 0.2) 0%, rgba(19, 47, 76, 0.9) 100%)',
+                                    border: '1px solid rgba(0, 217, 165, 0.3)'
+                                }}
+                                onClick={() => navigate('/sql-quiz')}
+                            >
+                                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                    <div style={{ fontSize: 48, marginBottom: 16 }}>🇺🇸</div>
+                                    <h2 style={{ margin: 0, marginBottom: 8, color: '#fff' }}>SQL Quiz</h2>
+                                    <p style={{ color: 'var(--text-secondary)', margin: 0, marginBottom: 16 }}>
+                                        Multiple choice questions! Read the query and pick the correct answer (A, B, C, D)
+                                    </p>
+                                    <Button type="primary" size="large" icon={<PlayCircleOutlined />}>
+                                        Play Quiz
+                                    </Button>
+                                </div>
+                            </Card>
+                        </Col>
+
+                        {/* SQL Query Writing */}
+                        <Col xs={24} md={12}>
+                            <Card 
+                                hoverable
+                                style={{ 
+                                    height: '100%',
+                                    background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(19, 47, 76, 0.9) 100%)',
+                                    border: '1px solid rgba(138, 43, 226, 0.3)'
+                                }}
+                                onClick={() => navigate('/sql')}
+                            >
+                                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                    <div style={{ fontSize: 48, marginBottom: 16 }}>✍️</div>
+                                    <h2 style={{ margin: 0, marginBottom: 8, color: '#fff' }}>SQL Challenge</h2>
+                                    <p style={{ color: 'var(--text-secondary)', margin: 0, marginBottom: 16 }}>
+                                        Write your own SQL queries to solve challenges. Test your coding skills!
+                                    </p>
+                                    <Button size="large" icon={<CodeOutlined />}>
+                                        Write Queries
+                                    </Button>
+                                </div>
+                            </Card>
+                        </Col>
+                    </Row>
 
                     {/* Trivia Quiz Card */}
                     <Card 
+                        hoverable
                         style={{ 
                             marginBottom: 24,
-                            background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(19, 47, 76, 0.9) 100%)',
-                            border: '1px solid rgba(138, 43, 226, 0.3)'
+                            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(19, 47, 76, 0.9) 100%)',
+                            border: '1px solid rgba(255, 215, 0, 0.3)'
                         }}
+                        onClick={() => navigate('/game')}
                     >
                         <Row align="middle" justify="space-between">
                             <Col>
-                                <h2 style={{ margin: 0, marginBottom: 8 }}>🎮 Trivia Quiz</h2>
+                                <h2 style={{ margin: 0, marginBottom: 8 }}>🎯 Football Trivia</h2>
                                 <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
                                     Test your football knowledge with fun trivia questions
                                 </p>
@@ -172,13 +195,7 @@ const Dashboard = () => {
                                 <Button 
                                     size="large"
                                     icon={<PlayCircleOutlined />}
-                                    onClick={() => navigate('/game')}
-                                    style={{ 
-                                        height: 48,
-                                        paddingLeft: 32,
-                                        paddingRight: 32,
-                                        fontSize: 16
-                                    }}
+                                    style={{ height: 48, paddingLeft: 32, paddingRight: 32, fontSize: 16 }}
                                 >
                                     Play Trivia
                                 </Button>

@@ -54,12 +54,23 @@ export const gameAPI = {
     getLeaderboard: (params = {}) => api.get('/game/leaderboard', { params }),
 };
 
-// SQL Challenge API
+// SQL Quiz API (Multiple Choice / American Style)
+export const sqlQuizAPI = {
+    getChallenges: (params = {}) => api.get('/sql/quiz/challenges', { params }),
+    startGame: (params = {}) => api.get('/sql/quiz/start', { params }),
+    submitAnswer: (id, answer) => api.post(`/sql/quiz/${id}/submit`, { answer }),
+};
+
+// SQL Query API (Write Your Own SQL)
+export const sqlQueryAPI = {
+    getChallenges: (params = {}) => api.get('/sql/query/challenges', { params }),
+    getChallenge: (id) => api.get(`/sql/query/challenges/${id}`),
+    submitQuery: (id, query) => api.post(`/sql/query/${id}/submit`, { query }),
+    executeQuery: (query) => api.post('/sql/query/execute', { query }),
+};
+
+// SQL Shared API
 export const sqlAPI = {
-    getChallenges: (params = {}) => api.get('/sql/challenges', { params }),
-    getChallenge: (id) => api.get(`/sql/challenges/${id}`),
-    executeQuery: (query) => api.post('/sql/execute', { query }),
-    submitChallenge: (id, query) => api.post(`/sql/challenges/${id}/submit`, { query }),
     getSchema: () => api.get('/sql/schema'),
     getLeaderboard: () => api.get('/sql/leaderboard'),
 };

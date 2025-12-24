@@ -50,4 +50,5 @@ class GameAnswer {
     }
 }
 
-module.exports = GameAnswer;
+
+
