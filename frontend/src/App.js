@@ -4,7 +4,6 @@ import { ConfigProvider, theme } from 'antd';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
-import Game from './components/Game';
 import Dashboard from './components/Dashboard';
 import Leaderboard from './components/Leaderboard';
 import SqlGame from './components/SqlGame';
@@ -68,8 +67,8 @@ const PublicRoute = ({ children }) => {
 };
 
 const AppRoutes = () => {
-    return (
-        <Routes>
+  return (
+      <Routes>
             <Route
                 path="/login"
                 element={
@@ -95,14 +94,6 @@ const AppRoutes = () => {
                 }
             />
             <Route
-                path="/game"
-                element={
-                    <ProtectedRoute>
-                        <Game />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
                 path="/sql"
                 element={
                     <ProtectedRoute>
@@ -124,11 +115,11 @@ const AppRoutes = () => {
                     <ProtectedRoute>
                         <Leaderboard />
                     </ProtectedRoute>
-                }
-            />
+          }
+        />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+      </Routes>
     );
 };
 
@@ -140,10 +131,10 @@ function App() {
                     <div className="app">
                         <AppRoutes />
                     </div>
-                </Router>
+    </Router>
             </AuthProvider>
         </ConfigProvider>
-    );
+  );
 }
 
 export default App;

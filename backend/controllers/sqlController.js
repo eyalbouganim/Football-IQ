@@ -76,12 +76,11 @@ const startQuizGame = async (req, res, next) => {
     }
 };
 
-// Submit quiz answer
+// Submit quiz answer (scores are now updated at game end, not per question)
 const submitQuizAnswer = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { answer } = req.body;
-        const userId = req.userId;
 
         const challenge = quizChallenges.find(c => c.id === parseInt(id));
         if (!challenge) {
@@ -95,21 +94,7 @@ const submitQuizAnswer = async (req, res, next) => {
         const isCorrect = answer.toUpperCase() === challenge.correctAnswer;
         const pointsEarned = isCorrect ? challenge.points : 0;
 
-        // Update user score if correct
-        if (isCorrect && userId) {
-            try {
-                await pool.query(
-                    `UPDATE users 
-                     SET total_score = total_score + ?, 
-                         games_played = games_played + 1,
-                         highest_score = GREATEST(highest_score, ?)
-                     WHERE id = ?`,
-                    [pointsEarned, pointsEarned, userId]
-                );
-            } catch (dbError) {
-                console.error('Error updating score:', dbError);
-            }
-        }
+        // Note: User scores are updated at game end via endQuizGame endpoint
 
         res.json({
             success: true,
@@ -121,6 +106,56 @@ const submitQuizAnswer = async (req, res, next) => {
                 yourAnswer: answer.toUpperCase()
             }
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// End quiz game and update user stats
+const endQuizGame = async (req, res, next) => {
+    try {
+        const { totalScore, correctCount, totalQuestions } = req.body;
+        const userId = req.userId;
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'User not authenticated' });
+        }
+
+        if (typeof totalScore !== 'number' || totalScore < 0) {
+            return res.status(400).json({ success: false, message: 'Invalid score' });
+        }
+
+        try {
+            // Update user stats - increment games_played once, add to total_score, update highest_score if this game was better
+            await pool.query(
+                `UPDATE users 
+                 SET total_score = total_score + ?, 
+                     games_played = games_played + 1,
+                     highest_score = GREATEST(highest_score, ?)
+                 WHERE id = ?`,
+                [totalScore, totalScore, userId]
+            );
+
+            // Get updated user data
+            const [users] = await pool.query('SELECT total_score, games_played, highest_score FROM users WHERE id = ?', [userId]);
+            const user = users[0];
+
+            res.json({
+                success: true,
+                message: 'Game completed!',
+                data: {
+                    scoreAdded: totalScore,
+                    correctCount,
+                    totalQuestions,
+                    newTotalScore: user?.total_score || 0,
+                    newHighestScore: user?.highest_score || 0,
+                    gamesPlayed: user?.games_played || 0
+                }
+            });
+        } catch (dbError) {
+            console.error('Error updating score:', dbError);
+            return res.status(500).json({ success: false, message: 'Failed to save score' });
+        }
     } catch (error) {
         next(error);
     }
@@ -266,16 +301,14 @@ const submitQueryAnswer = async (req, res, next) => {
 
         const pointsEarned = isCorrect ? challenge.points : 0;
 
-        // Update user score if correct
+        // Update user total score if correct (challenges add to total but don't count as games)
         if (isCorrect && userId) {
             try {
                 await pool.query(
                     `UPDATE users 
-                     SET total_score = total_score + ?, 
-                         games_played = games_played + 1,
-                         highest_score = GREATEST(highest_score, ?)
+                     SET total_score = total_score + ?
                      WHERE id = ?`,
-                    [pointsEarned, pointsEarned, userId]
+                    [pointsEarned, userId]
                 );
             } catch (dbError) {
                 console.error('Error updating score:', dbError);
@@ -427,6 +460,7 @@ module.exports = {
     getQuizChallenges,
     startQuizGame,
     submitQuizAnswer,
+    endQuizGame,
     // Query Mode
     getQueryChallenges,
     getQueryChallenge,

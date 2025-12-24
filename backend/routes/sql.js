@@ -15,6 +15,7 @@ router.get('/leaderboard', sqlController.getLeaderboard);
 router.get('/quiz/challenges', sqlController.getQuizChallenges);
 router.get('/quiz/start', authenticate, sqlController.startQuizGame);
 router.post('/quiz/:id/submit', authenticate, sqlController.submitQuizAnswer);
+router.post('/quiz/end', authenticate, sqlController.endQuizGame);
 
 // ========================================
 // ✍️ QUERY MODE - Write Your Own SQL

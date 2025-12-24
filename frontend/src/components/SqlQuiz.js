@@ -14,7 +14,9 @@ import {
     RocketOutlined,
     FireOutlined,
     StarOutlined,
-    BulbOutlined
+    BulbOutlined,
+    EyeOutlined,
+    EyeInvisibleOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { sqlQuizAPI } from '../services/api';
@@ -38,6 +40,7 @@ const SqlQuiz = () => {
     const [submitting, setSubmitting] = useState(false);
     const [gameResults, setGameResults] = useState(null);
     const [totalScore, setTotalScore] = useState(0);
+    const [showQuery, setShowQuery] = useState(false); // For flip to reveal query
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -94,11 +97,24 @@ const SqlQuiz = () => {
         }
     };
 
-    const nextQuestion = () => {
+    const nextQuestion = async () => {
         if (currentIndex + 1 >= questions.length) {
             const correct = answers.filter(a => a.isCorrect).length + (currentResult?.isCorrect ? 1 : 0);
+            const finalScore = totalScore;
+            
+            // Save the game score to the database
+            try {
+                await sqlQuizAPI.endGame({
+                    totalScore: finalScore,
+                    correctCount: correct,
+                    totalQuestions: questions.length
+                });
+            } catch (error) {
+                console.error('Failed to save game score:', error);
+            }
+            
             setGameResults({
-                totalPoints: totalScore,
+                totalPoints: finalScore,
                 correctCount: correct,
                 totalQuestions: questions.length,
                 percentage: Math.round((correct / questions.length) * 100)
@@ -109,6 +125,7 @@ const SqlQuiz = () => {
             setSelectedAnswer(null);
             setShowResult(false);
             setCurrentResult(null);
+            setShowQuery(false); // Reset query visibility for next question
         }
     };
 
@@ -371,24 +388,65 @@ const SqlQuiz = () => {
                                 {currentQuestion?.question}
                             </Title>
 
-                            {/* SQL Query Display */}
-                            <div style={{ 
-                                background: 'rgba(0,0,0,0.4)',
-                                borderRadius: 8,
-                                padding: 16,
-                                marginBottom: 24,
-                                border: '1px solid var(--bg-elevated)'
-                            }}>
-                                <pre style={{
-                                    margin: 0,
-                                    color: '#00d9a5',
-                                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                                    fontSize: 14,
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word'
-                                }}>
-                                    {currentQuestion?.query}
-                                </pre>
+                            {/* SQL Query Display - Flip to Reveal */}
+                            <div 
+                                onClick={() => !showQuery && setShowQuery(true)}
+                                style={{ 
+                                    background: 'rgba(0,0,0,0.4)',
+                                    borderRadius: 8,
+                                    padding: 16,
+                                    marginBottom: 24,
+                                    border: `1px solid ${showQuery ? 'var(--bg-elevated)' : 'rgba(0, 217, 165, 0.5)'}`,
+                                    cursor: showQuery ? 'default' : 'pointer',
+                                    position: 'relative',
+                                    minHeight: 80,
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                {showQuery ? (
+                                    <>
+                                        <div style={{ 
+                                            position: 'absolute', 
+                                            top: 8, 
+                                            right: 8,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                            color: 'var(--text-secondary)',
+                                            fontSize: 12
+                                        }}>
+                                            <EyeOutlined /> Query Revealed
+                                        </div>
+                                        <pre style={{
+                                            margin: 0,
+                                            marginTop: 16,
+                                            color: '#00d9a5',
+                                            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                            fontSize: 14,
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word'
+                                        }}>
+                                            {currentQuestion?.query}
+                                        </pre>
+                                    </>
+                                ) : (
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minHeight: 60,
+                                        gap: 8
+                                    }}>
+                                        <EyeInvisibleOutlined style={{ fontSize: 24, color: 'var(--primary)' }} />
+                                        <Text style={{ color: 'var(--primary)' }}>
+                                            🤔 Try answering without seeing the query!
+                                        </Text>
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            Click here to reveal the SQL query if you need help
+                                        </Text>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Answer Options */}

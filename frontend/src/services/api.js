@@ -45,11 +45,8 @@ export const authAPI = {
     changePassword: (data) => api.put('/auth/password', data),
 };
 
-// Game API (legacy trivia)
+// Game API (stats and leaderboard)
 export const gameAPI = {
-    startGame: (options = {}) => api.post('/game/start', options),
-    submitAnswer: (sessionId, data) => api.post(`/game/${sessionId}/answer`, data),
-    endGame: (sessionId) => api.post(`/game/${sessionId}/end`),
     getStats: () => api.get('/game/stats'),
     getLeaderboard: (params = {}) => api.get('/game/leaderboard', { params }),
 };
@@ -59,6 +56,7 @@ export const sqlQuizAPI = {
     getChallenges: (params = {}) => api.get('/sql/quiz/challenges', { params }),
     startGame: (params = {}) => api.get('/sql/quiz/start', { params }),
     submitAnswer: (id, answer) => api.post(`/sql/quiz/${id}/submit`, { answer }),
+    endGame: (data) => api.post('/sql/quiz/end', data),
 };
 
 // SQL Query API (Write Your Own SQL)

@@ -4,7 +4,6 @@ import {
     DashboardOutlined,
     PlayCircleOutlined,
     TrophyOutlined,
-    UserOutlined,
     LogoutOutlined,
     FireOutlined,
     ThunderboltOutlined,
@@ -52,7 +51,6 @@ const Dashboard = () => {
         { key: 'dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
         { key: 'sql-quiz', icon: <PlayCircleOutlined />, label: '🇺🇸 SQL Quiz' },
         { key: 'sql', icon: <CodeOutlined />, label: '✍️ SQL Challenge' },
-        { key: 'play', icon: <StarOutlined />, label: '🎯 Trivia' },
         { key: 'leaderboard', icon: <TrophyOutlined />, label: 'Leaderboard' },
         { type: 'divider' },
         { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true },
@@ -65,9 +63,6 @@ const Dashboard = () => {
                 break;
             case 'sql':
                 navigate('/sql');
-                break;
-            case 'play':
-                navigate('/game');
                 break;
             case 'leaderboard':
                 navigate('/leaderboard');
@@ -173,35 +168,6 @@ const Dashboard = () => {
                             </Card>
                         </Col>
                     </Row>
-
-                    {/* Trivia Quiz Card */}
-                    <Card 
-                        hoverable
-                        style={{ 
-                            marginBottom: 24,
-                            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(19, 47, 76, 0.9) 100%)',
-                            border: '1px solid rgba(255, 215, 0, 0.3)'
-                        }}
-                        onClick={() => navigate('/game')}
-                    >
-                        <Row align="middle" justify="space-between">
-                            <Col>
-                                <h2 style={{ margin: 0, marginBottom: 8 }}>🎯 Football Trivia</h2>
-                                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-                                    Test your football knowledge with fun trivia questions
-                                </p>
-                            </Col>
-                            <Col>
-                                <Button 
-                                    size="large"
-                                    icon={<PlayCircleOutlined />}
-                                    style={{ height: 48, paddingLeft: 32, paddingRight: 32, fontSize: 16 }}
-                                >
-                                    Play Trivia
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Card>
 
                     {/* Stats Cards */}
                     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
