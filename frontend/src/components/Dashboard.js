@@ -10,7 +10,7 @@ import {
     StarOutlined,
     CodeOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { gameAPI } from '../services/api';
 
@@ -23,11 +23,13 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [logoutModalVisible, setLogoutModalVisible] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, logout } = useAuth();
 
+    // Refresh stats every time Dashboard is visited (not just on mount)
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [location.key]);
 
     const fetchStats = async () => {
         try {

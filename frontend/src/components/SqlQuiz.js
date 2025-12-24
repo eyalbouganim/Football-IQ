@@ -100,15 +100,18 @@ const SqlQuiz = () => {
     const nextQuestion = async () => {
         if (currentIndex + 1 >= questions.length) {
             const correct = answers.filter(a => a.isCorrect).length + (currentResult?.isCorrect ? 1 : 0);
-            const finalScore = totalScore;
+            // Include the current question's points (which may not be in totalScore yet due to async state)
+            const lastQuestionPoints = currentResult?.isCorrect ? currentResult.pointsEarned : 0;
+            const finalScore = totalScore + (currentResult?.isCorrect && !answers.find(a => a.challengeId === questions[currentIndex]?.id) ? lastQuestionPoints : 0);
             
             // Save the game score to the database
             try {
-                await sqlQuizAPI.endGame({
+                const response = await sqlQuizAPI.endGame({
                     totalScore: finalScore,
                     correctCount: correct,
                     totalQuestions: questions.length
                 });
+                console.log('Game saved:', response.data);
             } catch (error) {
                 console.error('Failed to save game score:', error);
             }

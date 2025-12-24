@@ -117,16 +117,21 @@ const endQuizGame = async (req, res, next) => {
         const { totalScore, correctCount, totalQuestions } = req.body;
         const userId = req.userId;
 
+        console.log('[endQuizGame] Called with:', { totalScore, correctCount, totalQuestions, userId });
+
         if (!userId) {
+            console.log('[endQuizGame] No userId - not authenticated');
             return res.status(401).json({ success: false, message: 'User not authenticated' });
         }
 
         if (typeof totalScore !== 'number' || totalScore < 0) {
+            console.log('[endQuizGame] Invalid score:', totalScore);
             return res.status(400).json({ success: false, message: 'Invalid score' });
         }
 
         try {
             // Update user stats - increment games_played once, add to total_score, update highest_score if this game was better
+            console.log('[endQuizGame] Updating user', userId, 'with score:', totalScore);
             await pool.query(
                 `UPDATE users 
                  SET total_score = total_score + ?, 
@@ -137,8 +142,9 @@ const endQuizGame = async (req, res, next) => {
             );
 
             // Get updated user data
-            const [users] = await pool.query('SELECT total_score, games_played, highest_score FROM users WHERE id = ?', [userId]);
+            const [users] = await pool.query('SELECT username, total_score, games_played, highest_score FROM users WHERE id = ?', [userId]);
             const user = users[0];
+            console.log('[endQuizGame] Updated user:', user);
 
             res.json({
                 success: true,
@@ -153,10 +159,11 @@ const endQuizGame = async (req, res, next) => {
                 }
             });
         } catch (dbError) {
-            console.error('Error updating score:', dbError);
+            console.error('[endQuizGame] DB Error:', dbError);
             return res.status(500).json({ success: false, message: 'Failed to save score' });
         }
     } catch (error) {
+        console.error('[endQuizGame] Error:', error);
         next(error);
     }
 };
