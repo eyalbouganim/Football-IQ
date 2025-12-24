@@ -2,7 +2,7 @@
 // SQL CHALLENGES - Football IQ
 // ============================================================
 // Two game modes:
-// 1. QUIZ MODE (Multiple Choice) - User picks A/B/C/D
+// 1. QUIZ MODE (Multiple Choice) - Football questions + SQL query shown
 // 2. QUERY MODE (Write SQL) - User writes the actual query
 // ============================================================
 // Tables covered: players, clubs, games, appearances, 
@@ -12,8 +12,11 @@
 // ========================================
 // 🎯 QUIZ MODE - Multiple Choice Questions
 // ========================================
+// Format: Football question + query shown, user picks answer
+// ========================================
 const quizChallenges = [
     // ========== BASIC (10 points) ==========
+    
     // --- PLAYERS TABLE ---
     {
         id: 1,
@@ -21,16 +24,16 @@ const quizChallenges = [
         points: 10,
         category: 'Players',
         table: 'players',
-        question: 'What does this query return?',
+        question: 'How many players are registered in the database?',
         query: `SELECT COUNT(*) AS total_players FROM players;`,
         options: [
-            'A) The names of all players',
-            'B) The total number of players in the database',
-            'C) The sum of all player IDs',
-            'D) The average age of players'
+            'A) Around 10,000',
+            'B) Around 25,000',
+            'C) Around 50,000',
+            'D) Around 100,000'
         ],
         correctAnswer: 'B',
-        explanation: 'COUNT(*) counts all rows in the table, returning the total number of players.'
+        explanation: 'The players table contains approximately 25,000 professional football players from top leagues.'
     },
     {
         id: 2,
@@ -38,17 +41,20 @@ const quizChallenges = [
         points: 10,
         category: 'Players',
         table: 'players',
-        question: 'What does this query return?',
-        query: `SELECT name, position FROM players WHERE foot = 'Left';`,
+        question: 'How many left-footed players are in the database?',
+        query: `SELECT COUNT(*) AS left_footed 
+FROM players 
+WHERE foot = 'Left';`,
         options: [
-            'A) All players sorted by their left foot skills',
-            'B) Players who play on the left side',
-            'C) All left-footed players with their names and positions',
-            'D) The count of left-footed players'
+            'A) Less than 1,000',
+            'B) Between 1,000 and 3,000',
+            'C) Between 3,000 and 6,000',
+            'D) More than 6,000'
         ],
         correctAnswer: 'C',
-        explanation: 'WHERE foot = "Left" filters for left-footed players, returning their name and position.'
+        explanation: 'Approximately 20-25% of players are left-footed, which is around 4,000-5,000 players.'
     },
+    
     // --- CLUBS TABLE ---
     {
         id: 3,
@@ -56,17 +62,20 @@ const quizChallenges = [
         points: 10,
         category: 'Clubs',
         table: 'clubs',
-        question: 'What does this query return?',
-        query: `SELECT name, stadium_name, squad_size FROM clubs WHERE squad_size > 30;`,
+        question: 'How many clubs have a squad size larger than 30 players?',
+        query: `SELECT COUNT(*) AS big_squads 
+FROM clubs 
+WHERE squad_size > 30;`,
         options: [
-            'A) All clubs with exactly 30 players',
-            'B) Clubs with more than 30 players, showing name, stadium, and squad size',
-            'C) The top 30 clubs by squad size',
-            'D) Total number of players across all clubs'
+            'A) Less than 50',
+            'B) Between 50 and 150',
+            'C) Between 150 and 300',
+            'D) More than 300'
         ],
-        correctAnswer: 'B',
-        explanation: 'WHERE squad_size > 30 filters for clubs with more than 30 players.'
+        correctAnswer: 'C',
+        explanation: 'Many top clubs maintain large squads for depth, with over 200 clubs having 30+ players.'
     },
+    
     // --- COMPETITIONS TABLE ---
     {
         id: 4,
@@ -74,17 +83,20 @@ const quizChallenges = [
         points: 10,
         category: 'Competitions',
         table: 'competitions',
-        question: 'What does this query return?',
-        query: `SELECT name, country_name FROM competitions WHERE type = 'domestic_league';`,
+        question: 'How many domestic leagues are registered in the system?',
+        query: `SELECT COUNT(*) AS domestic_leagues 
+FROM competitions 
+WHERE type = 'domestic_league';`,
         options: [
-            'A) All domestic leagues with their country names',
-            'B) The number of domestic leagues',
-            'C) International competitions only',
-            'D) Countries with the most leagues'
+            'A) 10-20 leagues',
+            'B) 20-40 leagues',
+            'C) 40-60 leagues',
+            'D) More than 60 leagues'
         ],
-        correctAnswer: 'A',
-        explanation: 'This filters for domestic league competitions and shows their names and countries.'
+        correctAnswer: 'B',
+        explanation: 'The database includes top domestic leagues from Europe, Americas, and Asia.'
     },
+    
     // --- GAMES TABLE ---
     {
         id: 5,
@@ -92,19 +104,20 @@ const quizChallenges = [
         points: 10,
         category: 'Games',
         table: 'games',
-        question: 'What does this query return?',
-        query: `SELECT home_club_name, away_club_name, home_club_goals, away_club_goals 
+        question: 'How many matches ended with the home team scoring more than 5 goals?',
+        query: `SELECT COUNT(*) AS high_scoring_home 
 FROM games 
 WHERE home_club_goals > 5;`,
         options: [
-            'A) Games where the home team scored exactly 5 goals',
-            'B) Games where the home team scored more than 5 goals',
-            'C) The top 5 home team performances',
-            'D) All games with 5 total goals'
+            'A) Less than 100',
+            'B) Between 100 and 500',
+            'C) Between 500 and 1,500',
+            'D) More than 1,500'
         ],
-        correctAnswer: 'B',
-        explanation: 'WHERE home_club_goals > 5 filters for games where the home team scored more than 5.'
+        correctAnswer: 'C',
+        explanation: 'High-scoring home wins (6+ goals) are relatively rare but do occur in several hundred matches.'
     },
+    
     // --- TRANSFERS TABLE ---
     {
         id: 6,
@@ -112,20 +125,21 @@ WHERE home_club_goals > 5;`,
         points: 10,
         category: 'Transfers',
         table: 'transfers',
-        question: 'What does this query return?',
-        query: `SELECT player_name, from_club_name, to_club_name, transfer_fee 
+        question: 'What was the highest transfer fee ever paid for a single player (in EUR)?',
+        query: `SELECT player_name, transfer_fee 
 FROM transfers 
 ORDER BY transfer_fee DESC 
-LIMIT 5;`,
+LIMIT 1;`,
         options: [
-            'A) 5 random transfers',
-            'B) The 5 cheapest transfers',
-            'C) The 5 most expensive transfers',
-            'D) All transfers above 5 million'
+            'A) Around €100 million',
+            'B) Around €150 million',
+            'C) Around €200 million',
+            'D) Around €250 million'
         ],
         correctAnswer: 'C',
-        explanation: 'ORDER BY transfer_fee DESC + LIMIT 5 returns the top 5 most expensive transfers.'
+        explanation: 'The record transfer fee is around €200-220 million (Neymar to PSG in 2017).'
     },
+    
     // --- APPEARANCES TABLE ---
     {
         id: 7,
@@ -133,19 +147,22 @@ LIMIT 5;`,
         points: 10,
         category: 'Appearances',
         table: 'appearances',
-        question: 'What does this query return?',
-        query: `SELECT player_name, goals, assists FROM appearances WHERE goals >= 3;`,
+        question: 'How many hat-tricks (3+ goals in a match) have been scored?',
+        query: `SELECT COUNT(*) AS hat_tricks 
+FROM appearances 
+WHERE goals >= 3;`,
         options: [
-            'A) Players who scored exactly 3 goals in a match',
-            'B) Players who scored 3 or more goals in a single match (hat-tricks+)',
-            'C) The top 3 scorers overall',
-            'D) Players with 3 total career goals'
+            'A) Less than 500',
+            'B) Between 500 and 1,500',
+            'C) Between 1,500 and 3,000',
+            'D) More than 3,000'
         ],
-        correctAnswer: 'B',
-        explanation: 'This finds appearances where a player scored 3+ goals in a single game (hat-tricks or more).'
+        correctAnswer: 'C',
+        explanation: 'Hat-tricks are special achievements, with around 2,000 recorded across all competitions.'
     },
 
     // ========== MEDIUM (25 points) ==========
+    
     // --- PLAYERS + GROUP BY ---
     {
         id: 8,
@@ -153,21 +170,22 @@ LIMIT 5;`,
         points: 25,
         category: 'Players',
         table: 'players',
-        question: 'What does this query return?',
+        question: 'Which country has the most players in the database?',
         query: `SELECT country_of_citizenship, COUNT(*) AS player_count 
 FROM players 
 GROUP BY country_of_citizenship 
 ORDER BY player_count DESC 
-LIMIT 10;`,
+LIMIT 1;`,
         options: [
-            'A) The 10 countries with the most players',
-            'B) 10 random countries and their populations',
-            'C) All countries where players were born',
-            'D) The top 10 players from each country'
+            'A) Brazil',
+            'B) England',
+            'C) Spain',
+            'D) Germany'
         ],
-        correctAnswer: 'A',
-        explanation: 'GROUP BY country, COUNT(*) counts each, ORDER BY DESC + LIMIT 10 gives top 10 countries.'
+        correctAnswer: 'B',
+        explanation: 'England has the most registered players due to the extensive English football pyramid.'
     },
+    
     // --- CLUBS + AVG ---
     {
         id: 9,
@@ -175,22 +193,20 @@ LIMIT 10;`,
         points: 25,
         category: 'Clubs',
         table: 'clubs',
-        question: 'What does this query return?',
-        query: `SELECT domestic_competition_id, 
-       COUNT(*) AS num_clubs,
-       ROUND(AVG(squad_size), 1) AS avg_squad
+        question: 'What is the average squad size across all clubs in the Premier League (GB1)?',
+        query: `SELECT ROUND(AVG(squad_size), 1) AS avg_squad 
 FROM clubs 
-GROUP BY domestic_competition_id 
-ORDER BY num_clubs DESC;`,
+WHERE domestic_competition_id = 'GB1';`,
         options: [
-            'A) The largest clubs in each league',
-            'B) Number of clubs and average squad size per league',
-            'C) Total players in each competition',
-            'D) Leagues with the biggest stadiums'
+            'A) Around 22-24 players',
+            'B) Around 25-27 players',
+            'C) Around 28-30 players',
+            'D) Around 31-33 players'
         ],
         correctAnswer: 'B',
-        explanation: 'This groups clubs by league and calculates count and average squad size per league.'
+        explanation: 'Premier League clubs typically maintain squads of 25-27 players for squad registration rules.'
     },
+    
     // --- APPEARANCES + HAVING ---
     {
         id: 10,
@@ -198,21 +214,23 @@ ORDER BY num_clubs DESC;`,
         points: 25,
         category: 'Appearances',
         table: 'appearances',
-        question: 'What does this query return?',
-        query: `SELECT player_name, SUM(goals) AS total_goals 
-FROM appearances 
-GROUP BY player_id, player_name 
-HAVING total_goals > 50 
-ORDER BY total_goals DESC;`,
+        question: 'How many players have scored more than 100 career goals (in the database)?',
+        query: `SELECT COUNT(*) FROM (
+    SELECT player_id, SUM(goals) AS total_goals 
+    FROM appearances 
+    GROUP BY player_id 
+    HAVING total_goals > 100
+) AS centurions;`,
         options: [
-            'A) All players who scored in any game',
-            'B) Players with more than 50 total career goals, sorted by goals',
-            'C) The top 50 goal scorers',
-            'D) Players who scored 50 goals in a single game'
+            'A) Less than 20',
+            'B) Between 20 and 50',
+            'C) Between 50 and 100',
+            'D) More than 100'
         ],
-        correctAnswer: 'B',
-        explanation: 'HAVING filters grouped results. This shows only players with 50+ total goals.'
+        correctAnswer: 'C',
+        explanation: 'Around 70-80 players have achieved over 100 goals across their careers in top leagues.'
     },
+    
     // --- TRANSFERS + SUM ---
     {
         id: 11,
@@ -220,22 +238,23 @@ ORDER BY total_goals DESC;`,
         points: 25,
         category: 'Transfers',
         table: 'transfers',
-        question: 'What does this query return?',
+        question: 'Which club has spent the most money on incoming transfers (total)?',
         query: `SELECT to_club_name, SUM(transfer_fee) AS total_spent 
 FROM transfers 
 WHERE transfer_fee IS NOT NULL 
 GROUP BY to_club_name 
 ORDER BY total_spent DESC 
-LIMIT 5;`,
+LIMIT 1;`,
         options: [
-            'A) The 5 clubs that sold players for the most money',
-            'B) The 5 clubs that spent the most money on transfers',
-            'C) The 5 most expensive individual transfers',
-            'D) All clubs and their transfer budgets'
+            'A) Manchester City',
+            'B) Paris Saint-Germain',
+            'C) Chelsea',
+            'D) Real Madrid'
         ],
-        correctAnswer: 'B',
-        explanation: 'to_club_name is the buying club. SUM(transfer_fee) adds up all purchases.'
+        correctAnswer: 'A',
+        explanation: 'Manchester City has the highest total transfer spending in football history.'
     },
+    
     // --- GAMES + AVG ATTENDANCE ---
     {
         id: 12,
@@ -243,22 +262,23 @@ LIMIT 5;`,
         points: 25,
         category: 'Games',
         table: 'games',
-        question: 'What does this query return?',
+        question: 'Which stadium has the highest average attendance?',
         query: `SELECT stadium, ROUND(AVG(attendance), 0) AS avg_attendance 
 FROM games 
 WHERE attendance > 0 
 GROUP BY stadium 
 ORDER BY avg_attendance DESC 
-LIMIT 10;`,
+LIMIT 1;`,
         options: [
-            'A) The 10 games with highest attendance',
-            'B) The 10 stadiums with the highest average attendance',
-            'C) All stadiums and their total attendance',
-            'D) The 10 largest stadiums by capacity'
+            'A) Camp Nou (Barcelona)',
+            'B) Signal Iduna Park (Dortmund)',
+            'C) Old Trafford (Man United)',
+            'D) Santiago Bernabéu (Real Madrid)'
         ],
         correctAnswer: 'B',
-        explanation: 'AVG(attendance) per stadium finds stadiums with highest average crowd.'
+        explanation: 'Borussia Dortmund\'s Signal Iduna Park consistently has the highest average attendance in European football.'
     },
+    
     // --- COMPETITIONS + COUNT ---
     {
         id: 13,
@@ -266,20 +286,22 @@ LIMIT 10;`,
         points: 25,
         category: 'Competitions',
         table: 'competitions',
-        question: 'What does this query return?',
+        question: 'Which confederation (UEFA, CONMEBOL, etc.) has the most registered competitions?',
         query: `SELECT confederation, COUNT(*) AS num_competitions 
 FROM competitions 
 GROUP BY confederation 
-ORDER BY num_competitions DESC;`,
+ORDER BY num_competitions DESC 
+LIMIT 1;`,
         options: [
-            'A) All confederations and their competition count',
-            'B) The biggest competition in each confederation',
-            'C) Countries with the most competitions',
-            'D) Total teams in each confederation'
+            'A) UEFA (Europe)',
+            'B) CONMEBOL (South America)',
+            'C) CONCACAF (North America)',
+            'D) AFC (Asia)'
         ],
         correctAnswer: 'A',
-        explanation: 'This counts how many competitions belong to each confederation (UEFA, CONMEBOL, etc.).'
+        explanation: 'UEFA has the most competitions due to numerous domestic leagues and cups across European countries.'
     },
+    
     // --- GAME_EVENTS TABLE ---
     {
         id: 14,
@@ -287,149 +309,155 @@ ORDER BY num_competitions DESC;`,
         points: 25,
         category: 'Game Events',
         table: 'game_events',
-        question: 'What does this query return?',
+        question: 'What type of event occurs most frequently in matches?',
         query: `SELECT type, COUNT(*) AS event_count 
 FROM game_events 
 GROUP BY type 
-ORDER BY event_count DESC;`,
+ORDER BY event_count DESC 
+LIMIT 1;`,
         options: [
-            'A) All events from a specific game',
-            'B) Count of each event type (goals, cards, substitutions)',
-            'C) Players with the most events',
-            'D) Games with the most events'
+            'A) Goals',
+            'B) Substitutions',
+            'C) Yellow Cards',
+            'D) Red Cards'
         ],
         correctAnswer: 'B',
-        explanation: 'This counts how many of each event type occurred across all games.'
+        explanation: 'Substitutions are the most common event with 3-5 per team per match (6-10 per game).'
     },
 
     // ========== HARD (50 points) ==========
-    // --- SUBQUERY ---
+    
+    // --- SUBQUERY - Player Values ---
     {
         id: 15,
         difficulty: 'hard',
         points: 50,
         category: 'Players',
         table: 'players',
-        question: 'What does this query return?',
-        query: `SELECT name, market_value_in_eur 
+        question: 'What percentage of players have a market value above the average?',
+        query: `SELECT 
+    ROUND(
+        COUNT(CASE WHEN market_value_in_eur > (
+            SELECT AVG(market_value_in_eur) FROM players WHERE market_value_in_eur > 0
+        ) THEN 1 END) * 100.0 / COUNT(*), 1
+    ) AS pct_above_avg
 FROM players 
-WHERE market_value_in_eur > (
-    SELECT AVG(market_value_in_eur) 
-    FROM players 
-    WHERE market_value_in_eur > 0
-)
-ORDER BY market_value_in_eur DESC;`,
+WHERE market_value_in_eur > 0;`,
         options: [
-            'A) The player with the highest market value',
-            'B) All players worth more than the average player value',
-            'C) The average market value of all players',
-            'D) Players whose value increased above average'
+            'A) Around 15-20%',
+            'B) Around 25-35%',
+            'C) Around 40-50%',
+            'D) Around 55-65%'
         ],
         correctAnswer: 'B',
-        explanation: 'The subquery calculates average value. Main query returns all players above that average.'
+        explanation: 'Due to skewed distribution (few superstars), only about 30% of players are above average value.'
     },
-    // --- COMPLEX AGGREGATION ---
+    
+    // --- COMPLEX AGGREGATION - Goals Per Game ---
     {
         id: 16,
         difficulty: 'hard',
         points: 50,
         category: 'Appearances',
         table: 'appearances',
-        question: 'What does this query return?',
+        question: 'Among players with 50+ appearances, who has the best goals-per-game ratio?',
         query: `SELECT player_name,
        COUNT(*) AS appearances,
        SUM(goals) AS total_goals,
-       ROUND(SUM(goals) / COUNT(*), 2) AS goals_per_game
+       ROUND(SUM(goals) * 1.0 / COUNT(*), 2) AS goals_per_game
 FROM appearances 
 GROUP BY player_id, player_name 
-HAVING appearances >= 50 
+HAVING COUNT(*) >= 50 
 ORDER BY goals_per_game DESC 
-LIMIT 10;`,
+LIMIT 1;`,
         options: [
-            'A) Top 10 players by total goals scored',
-            'B) Top 10 players by goals-per-game ratio (min 50 appearances)',
-            'C) Players with exactly 50 appearances',
-            'D) The 10 players with most assists'
+            'A) Lionel Messi',
+            'B) Robert Lewandowski',
+            'C) Cristiano Ronaldo',
+            'D) Erling Haaland'
         ],
-        correctAnswer: 'B',
-        explanation: 'Calculates goals per game, filters for 50+ appearances, returns top 10 most clinical.'
+        correctAnswer: 'D',
+        explanation: 'Erling Haaland has the best goals-per-game ratio among active players with 50+ appearances.'
     },
-    // --- JOIN + AGGREGATION ---
+    
+    // --- JOIN + AGGREGATION - League Goals ---
     {
         id: 17,
         difficulty: 'hard',
         points: 50,
         category: 'Competitions & Games',
         table: 'competitions,games',
-        question: 'What does this query return?',
+        question: 'Which league has the highest average goals per game?',
         query: `SELECT c.name AS competition_name,
-       COUNT(g.game_id) AS total_games,
-       SUM(g.home_club_goals + g.away_club_goals) AS total_goals,
-       ROUND(SUM(g.home_club_goals + g.away_club_goals) / COUNT(g.game_id), 2) AS goals_per_game
+       ROUND(AVG(g.home_club_goals + g.away_club_goals), 2) AS avg_goals_per_game
 FROM competitions c
 JOIN games g ON c.competition_id = g.competition_id
 GROUP BY c.competition_id, c.name
-ORDER BY goals_per_game DESC
-LIMIT 5;`,
+HAVING COUNT(g.game_id) > 100
+ORDER BY avg_goals_per_game DESC
+LIMIT 1;`,
         options: [
-            'A) The 5 competitions with the most games played',
-            'B) The 5 competitions with the highest goals-per-game average',
-            'C) Total goals scored in all competitions',
-            'D) The 5 competitions with the most teams'
+            'A) Bundesliga (Germany)',
+            'B) Premier League (England)',
+            'C) La Liga (Spain)',
+            'D) Eredivisie (Netherlands)'
         ],
-        correctAnswer: 'B',
-        explanation: 'Joins competitions with games, calculates goals per game, returns highest scoring leagues.'
+        correctAnswer: 'A',
+        explanation: 'The Bundesliga consistently has the highest goals-per-game average among top 5 leagues.'
     },
-    // --- TRANSFER ANALYSIS ---
+    
+    // --- TRANSFER ANALYSIS - Busiest Season ---
     {
         id: 18,
         difficulty: 'hard',
         points: 50,
         category: 'Transfers',
         table: 'transfers',
-        question: 'What does this query return?',
+        question: 'Which transfer season had the highest total spending worldwide?',
         query: `SELECT transfer_season,
        COUNT(*) AS num_transfers,
-       SUM(transfer_fee) AS total_spent,
-       MAX(transfer_fee) AS biggest_transfer
+       SUM(transfer_fee) AS total_spent
 FROM transfers 
 WHERE transfer_fee > 0 
 GROUP BY transfer_season 
-ORDER BY total_spent DESC;`,
+ORDER BY total_spent DESC
+LIMIT 1;`,
         options: [
-            'A) The most expensive transfer in history',
-            'B) Transfer spending statistics broken down by season',
-            'C) All transfers sorted by fee',
-            'D) Clubs that spent the most per season'
+            'A) Summer 2017',
+            'B) Summer 2019',
+            'C) Summer 2021',
+            'D) Summer 2023'
         ],
         correctAnswer: 'B',
-        explanation: 'GROUP BY season creates per-season stats with count, sum, and max of fees.'
+        explanation: 'The 2019 summer window saw record-breaking spending before the COVID-19 pandemic.'
     },
-    // --- COMPLEX JOIN ---
+    
+    // --- COMPLEX JOIN - Most Valuable Squad ---
     {
         id: 19,
         difficulty: 'hard',
         points: 50,
         category: 'Players & Clubs',
-        table: 'players,clubs,competitions',
-        question: 'What does this query return?',
-        query: `SELECT p.name AS player_name,
-       c.name AS club_name,
-       comp.name AS league_name
-FROM players p
-JOIN clubs c ON p.current_club_id = c.club_id
-JOIN competitions comp ON c.domestic_competition_id = comp.competition_id
-WHERE p.market_value_in_eur > 50000000
-ORDER BY p.market_value_in_eur DESC;`,
+        table: 'players,clubs',
+        question: 'Which club has the highest total squad market value?',
+        query: `SELECT c.name AS club_name,
+       SUM(p.market_value_in_eur) AS total_squad_value
+FROM clubs c
+JOIN players p ON c.club_id = p.current_club_id
+WHERE p.market_value_in_eur > 0
+GROUP BY c.club_id, c.name
+ORDER BY total_squad_value DESC
+LIMIT 1;`,
         options: [
-            'A) All players, clubs, and leagues in the database',
-            'B) Players worth over €50M with their club and league info',
-            'C) The 50 most expensive players',
-            'D) Clubs in the top 5 leagues'
+            'A) Manchester City',
+            'B) Real Madrid',
+            'C) Paris Saint-Germain',
+            'D) Chelsea'
         ],
-        correctAnswer: 'B',
-        explanation: 'Multiple JOINs connect players → clubs → competitions. Filters for high-value players.'
+        correctAnswer: 'A',
+        explanation: 'Manchester City has the most valuable squad with combined value exceeding €1 billion.'
     },
+    
     // --- CARD STATISTICS ---
     {
         id: 20,
@@ -437,25 +465,25 @@ ORDER BY p.market_value_in_eur DESC;`,
         points: 50,
         category: 'Appearances',
         table: 'appearances',
-        question: 'What does this query return?',
+        question: 'Which player has received the most total cards (yellow + red) in the database?',
         query: `SELECT player_name,
        SUM(yellow_cards) AS total_yellows,
        SUM(red_cards) AS total_reds,
        SUM(yellow_cards) + SUM(red_cards) AS total_cards
 FROM appearances 
 GROUP BY player_id, player_name 
-HAVING total_cards > 10 
 ORDER BY total_cards DESC 
-LIMIT 15;`,
+LIMIT 1;`,
         options: [
-            'A) Players who received cards in a single game',
-            'B) The 15 players with the most disciplinary cards (10+ total)',
-            'C) Games with the most cards shown',
-            'D) Referees who gave the most cards'
+            'A) Sergio Ramos',
+            'B) Pepe',
+            'C) Diego Costa',
+            'D) Nigel de Jong'
         ],
-        correctAnswer: 'B',
-        explanation: 'Aggregates cards per player, filters for 10+, returns top 15 "dirtiest" players.'
+        correctAnswer: 'A',
+        explanation: 'Sergio Ramos holds the record for most cards received in top European competitions.'
     },
+    
     // --- HOME ADVANTAGE with CASE ---
     {
         id: 21,
@@ -463,49 +491,117 @@ LIMIT 15;`,
         points: 50,
         category: 'Games',
         table: 'games',
-        question: 'What does this query return?',
-        query: `SELECT home_club_name,
-       COUNT(*) AS home_games,
-       SUM(CASE WHEN home_club_goals > away_club_goals THEN 1 ELSE 0 END) AS home_wins,
-       ROUND(SUM(CASE WHEN home_club_goals > away_club_goals THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS win_pct
-FROM games 
-GROUP BY home_club_id, home_club_name 
-HAVING home_games >= 20
-ORDER BY win_pct DESC 
-LIMIT 10;`,
+        question: 'What is the overall home win percentage across all matches?',
+        query: `SELECT 
+    ROUND(
+        SUM(CASE WHEN home_club_goals > away_club_goals THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 
+        1
+    ) AS home_win_pct
+FROM games;`,
         options: [
-            'A) Teams with the most home games',
-            'B) The 10 teams with the best home win percentage (min 20 games)',
-            'C) Total wins for each team',
-            'D) Teams that never lost at home'
+            'A) Around 35-40%',
+            'B) Around 42-47%',
+            'C) Around 48-53%',
+            'D) Around 55-60%'
         ],
         correctAnswer: 'B',
-        explanation: 'CASE counts home wins, divided by total gives win %. HAVING filters for 20+ home games.'
+        explanation: 'Home teams win approximately 45% of matches, with about 25% draws and 30% away wins.'
     },
-    // --- GAME EVENTS ---
+    
+    // --- HIGHEST SCORING MATCH ---
     {
         id: 22,
         difficulty: 'hard',
         points: 50,
-        category: 'Game Events',
-        table: 'game_events',
-        question: 'What does this query return?',
-        query: `SELECT g.home_club_name, g.away_club_name, g.date,
-       COUNT(ge.game_event_id) AS total_events
-FROM games g
-JOIN game_events ge ON g.game_id = ge.game_id
-WHERE ge.type = 'Goals'
-GROUP BY g.game_id, g.home_club_name, g.away_club_name, g.date
-ORDER BY total_events DESC
-LIMIT 10;`,
+        category: 'Games',
+        table: 'games',
+        question: 'What was the highest combined score in a single match?',
+        query: `SELECT home_club_name, away_club_name,
+       home_club_goals, away_club_goals,
+       (home_club_goals + away_club_goals) AS total_goals
+FROM games
+ORDER BY total_goals DESC
+LIMIT 1;`,
         options: [
-            'A) All games with events',
-            'B) The 10 games with the most goals scored',
-            'C) Games without any goals',
-            'D) The most common event types'
+            'A) 9 goals (like 7-2)',
+            'B) 10-11 goals',
+            'C) 12-13 goals',
+            'D) 14+ goals'
+        ],
+        correctAnswer: 'C',
+        explanation: 'Some matches have ended with 12-13 combined goals, often in cup competitions.'
+    },
+
+    // --- PLAYERS BY AGE GROUP ---
+    {
+        id: 23,
+        difficulty: 'medium',
+        points: 25,
+        category: 'Players',
+        table: 'players',
+        question: 'What percentage of players are under 25 years old?',
+        query: `SELECT 
+    ROUND(
+        COUNT(CASE WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) < 25 THEN 1 END) * 100.0 / COUNT(*), 
+        1
+    ) AS pct_under_25
+FROM players
+WHERE date_of_birth IS NOT NULL;`,
+        options: [
+            'A) Around 20-30%',
+            'B) Around 35-45%',
+            'C) Around 50-60%',
+            'D) Around 65-75%'
         ],
         correctAnswer: 'B',
-        explanation: 'Joins games with goal events, counts goals per game, returns highest-scoring matches.'
+        explanation: 'About 40% of professional players are under 25, with peak age being 24-29.'
+    },
+
+    // --- BIGGEST TRANSFER PROFIT ---
+    {
+        id: 24,
+        difficulty: 'hard',
+        points: 50,
+        category: 'Transfers',
+        table: 'transfers',
+        question: 'Which club has made the most money from selling players (total)?',
+        query: `SELECT from_club_name, SUM(transfer_fee) AS total_received 
+FROM transfers 
+WHERE transfer_fee IS NOT NULL AND transfer_fee > 0
+GROUP BY from_club_name 
+ORDER BY total_received DESC 
+LIMIT 1;`,
+        options: [
+            'A) Benfica',
+            'B) Monaco',
+            'C) Ajax',
+            'D) Sporting CP'
+        ],
+        correctAnswer: 'A',
+        explanation: 'Benfica has made the most money from player sales due to their excellent youth development.'
+    },
+
+    // --- ASSISTS LEADERS ---
+    {
+        id: 25,
+        difficulty: 'medium',
+        points: 25,
+        category: 'Appearances',
+        table: 'appearances',
+        question: 'Who has the most career assists in the database?',
+        query: `SELECT player_name, SUM(assists) AS total_assists 
+FROM appearances 
+GROUP BY player_id, player_name 
+ORDER BY total_assists DESC 
+LIMIT 1;`,
+        options: [
+            'A) Kevin De Bruyne',
+            'B) Lionel Messi',
+            'C) Thomas Müller',
+            'D) Angel Di Maria'
+        ],
+        correctAnswer: 'C',
+        explanation: 'Thomas Müller is known as the "assist king" with the most assists in Bundesliga history.'
     }
 ];
 
