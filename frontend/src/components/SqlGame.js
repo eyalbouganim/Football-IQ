@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Layout, Card, Button, Table, message, Select, Tag, 
-    Collapse, Spin, Typography, Row, Col, Alert
+    Collapse, Spin, Typography, Row, Col, Alert, Tabs, Tooltip
 } from 'antd';
 import {
     CodeOutlined,
@@ -13,7 +13,11 @@ import {
     DatabaseOutlined,
     StarOutlined,
     FireOutlined,
-    RocketOutlined
+    RocketOutlined,
+    KeyOutlined,
+    LinkOutlined,
+    InfoCircleOutlined,
+    ApartmentOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { sqlQueryAPI, sqlAPI } from '../services/api';
@@ -231,27 +235,163 @@ const SqlGame = () => {
                         {/* Schema Reference */}
                         {schema && (
                             <Card 
-                                title={<><TableOutlined /> Database Schema</>}
+                                title={<><DatabaseOutlined /> Database Schema</>}
                                 style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}
-                                bodyStyle={{ maxHeight: 300, overflow: 'auto' }}
+                                bodyStyle={{ padding: 0 }}
                             >
-                                <Collapse ghost size="small">
-                                    {schema.tables.map(table => (
-                                        <Panel 
-                                            header={<Text style={{ color: '#fff' }}>{table.name}</Text>} 
-                                            key={table.name}
-                                        >
-                                            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                                                {table.description}
-                                            </Text>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                                {table.columns.map(col => (
-                                                    <Tag key={col} style={{ fontSize: 10 }}>{col}</Tag>
-                                                ))}
-                                            </div>
-                                        </Panel>
-                                    ))}
-                                </Collapse>
+                                <Tabs 
+                                    defaultActiveKey="diagram" 
+                                    size="small"
+                                    style={{ padding: '0 12px' }}
+                                    items={[
+                                        {
+                                            key: 'diagram',
+                                            label: <><ApartmentOutlined /> Diagram</>,
+                                            children: (
+                                                <div style={{ 
+                                                    background: 'rgba(0,0,0,0.3)', 
+                                                    borderRadius: 8, 
+                                                    padding: 12,
+                                                    marginBottom: 12,
+                                                    overflow: 'auto',
+                                                    maxHeight: 350
+                                                }}>
+                                                    <pre style={{ 
+                                                        margin: 0, 
+                                                        fontSize: 9,
+                                                        lineHeight: 1.3,
+                                                        color: '#00d9a5',
+                                                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                                        whiteSpace: 'pre'
+                                                    }}>
+                                                        {schema.diagram}
+                                                    </pre>
+                                                </div>
+                                            )
+                                        },
+                                        {
+                                            key: 'tables',
+                                            label: <><TableOutlined /> Tables</>,
+                                            children: (
+                                                <div style={{ maxHeight: 350, overflow: 'auto', marginBottom: 12 }}>
+                                                    <Collapse ghost size="small" accordion>
+                                                        {schema.tables.map(table => (
+                                                            <Panel 
+                                                                header={
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                        <Text strong style={{ color: '#fff' }}>{table.name}</Text>
+                                                                        {table.primaryKey && (
+                                                                            <Tag color="gold" style={{ fontSize: 9 }}>
+                                                                                <KeyOutlined /> {table.primaryKey}
+                                                                            </Tag>
+                                                                        )}
+                                                                    </div>
+                                                                } 
+                                                                key={table.name}
+                                                            >
+                                                                <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 8 }}>
+                                                                    {table.description}
+                                                                </Text>
+                                                                
+                                                                {/* Foreign Keys */}
+                                                                {table.foreignKeys?.length > 0 && (
+                                                                    <div style={{ marginBottom: 8 }}>
+                                                                        <Text type="secondary" style={{ fontSize: 10 }}>
+                                                                            <LinkOutlined /> Foreign Keys:
+                                                                        </Text>
+                                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                                                                            {table.foreignKeys.map((fk, i) => (
+                                                                                <Tag key={i} color="blue" style={{ fontSize: 9 }}>
+                                                                                    {fk.column} → {fk.references}
+                                                                                </Tag>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {/* Columns */}
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                                    {table.columns.map(col => (
+                                                                        <Tooltip 
+                                                                            key={col.name} 
+                                                                            title={`${col.type} - ${col.description}`}
+                                                                            placement="right"
+                                                                        >
+                                                                            <div style={{ 
+                                                                                display: 'flex', 
+                                                                                alignItems: 'center', 
+                                                                                gap: 6,
+                                                                                padding: '2px 6px',
+                                                                                background: col.key ? 'rgba(0,217,165,0.1)' : 'transparent',
+                                                                                borderRadius: 4
+                                                                            }}>
+                                                                                {col.key === 'PK' && <KeyOutlined style={{ color: '#faad14', fontSize: 10 }} />}
+                                                                                {col.key === 'FK' && <LinkOutlined style={{ color: '#1890ff', fontSize: 10 }} />}
+                                                                                <Text style={{ fontSize: 11, color: col.key ? '#00d9a5' : '#fff' }}>
+                                                                                    {col.name}
+                                                                                </Text>
+                                                                                <Text type="secondary" style={{ fontSize: 9 }}>
+                                                                                    {col.type}
+                                                                                </Text>
+                                                                            </div>
+                                                                        </Tooltip>
+                                                                    ))}
+                                                                </div>
+                                                            </Panel>
+                                                        ))}
+                                                    </Collapse>
+                                                </div>
+                                            )
+                                        },
+                                        {
+                                            key: 'tips',
+                                            label: <><BulbOutlined /> SQL Tips</>,
+                                            children: (
+                                                <div style={{ maxHeight: 350, overflow: 'auto', marginBottom: 12 }}>
+                                                    {schema.tips?.map((tip, i) => (
+                                                        <div 
+                                                            key={i} 
+                                                            style={{ 
+                                                                padding: '8px 12px',
+                                                                background: 'rgba(0,0,0,0.2)',
+                                                                borderRadius: 6,
+                                                                marginBottom: 6
+                                                            }}
+                                                        >
+                                                            <Text style={{ fontSize: 11, color: '#00d9a5' }}>
+                                                                💡 {tip}
+                                                            </Text>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    <div style={{ marginTop: 12 }}>
+                                                        <Text strong style={{ color: '#fff', fontSize: 11 }}>
+                                                            🔗 Common JOINs:
+                                                        </Text>
+                                                        <pre style={{ 
+                                                            fontSize: 10, 
+                                                            color: '#00d9a5',
+                                                            background: 'rgba(0,0,0,0.3)',
+                                                            padding: 8,
+                                                            borderRadius: 4,
+                                                            marginTop: 6
+                                                        }}>
+{`-- Players with their clubs
+SELECT p.name, c.name as club
+FROM players p
+JOIN clubs c ON p.current_club_id = c.club_id
+
+-- Player stats in games
+SELECT p.name, a.goals, a.assists
+FROM appearances a
+JOIN players p ON a.player_id = p.player_id`}
+                                                        </pre>
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+                                    ]}
+                                />
                             </Card>
                         )}
                     </Col>
