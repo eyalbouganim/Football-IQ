@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-    Layout, Card, Button, message, Select, Tag, Typography, 
+    Layout, Card, Button, message, Select, Tag, Typography, Spin,
     Row, Col, Progress, Result, Radio, Space, Divider
 } from 'antd';
 import {
@@ -51,6 +51,12 @@ const SqlQuiz = () => {
             if (difficulty !== 'all') params.difficulty = difficulty;
             
             const response = await sqlQuizAPI.startGame(params);
+            
+            if (!response.data.data.questions || response.data.data.questions.length === 0) {
+                message.warning('No questions found for these settings. Please try a different difficulty.');
+                return;
+            }
+
             setQuestions(response.data.data.questions);
             setCurrentIndex(0);
             setAnswers([]);
@@ -344,6 +350,18 @@ const SqlQuiz = () => {
     // ========================================
     // PLAYING SCREEN
     // ========================================
+    
+    // Safety check: if we are in playing mode but have no question, show loading or error
+    if (!currentQuestion) {
+        return (
+            <Layout style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+                <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Spin size="large" tip="Loading question..." />
+                </Content>
+            </Layout>
+        );
+    }
+
     return (
         <Layout style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
             <Content style={{ padding: 24 }}>
@@ -461,7 +479,7 @@ const SqlQuiz = () => {
                                         style={{ width: '100%' }}
                                     >
                                         <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                                            {currentQuestion?.options.map((option, idx) => {
+                                            {currentQuestion?.options?.map((option, idx) => {
                                                 const letter = ['A', 'B', 'C', 'D'][idx];
                                                 return (
                                                     <Card
@@ -506,7 +524,7 @@ const SqlQuiz = () => {
                                 /* Result Display */
                                 <div>
                                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                                        {currentQuestion?.options.map((option, idx) => {
+                                        {currentQuestion?.options?.map((option, idx) => {
                                             const letter = ['A', 'B', 'C', 'D'][idx];
                                             const isCorrect = letter === currentResult?.correctAnswer;
                                             const isUserAnswer = letter === currentResult?.yourAnswer;
@@ -594,6 +612,3 @@ const SqlQuiz = () => {
 };
 
 export default SqlQuiz;
-
-
-

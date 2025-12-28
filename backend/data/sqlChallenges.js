@@ -884,4 +884,114 @@ ORDER BY total_spent DESC;`,
     }
 ];
 
-module.exports = { quizChallenges, queryChallenges };
+// ========================================
+// 🛠️ DYNAMIC QUIZ GENERATOR
+// ========================================
+// This function runs the queries against the database to find the
+// real answers and updates the correct option dynamically.
+// ========================================
+const verifyChallenge = async (db, challengeTemplate) => {
+    const challenge = JSON.parse(JSON.stringify(challengeTemplate));
+    try {
+        // Execute the solution query
+        const [rows] = await db.query(challenge.query);
+        
+        if (!rows || rows.length === 0) return challenge;
+
+        const row = rows[0];
+        const rowValues = Object.values(row);
+        
+        let bestOptionIndex = -1;
+        let minDiff = Infinity;
+
+        // Helper to parse number from string with multiplier
+        const parseNum = (str, mult) => {
+            if (!str) return NaN;
+            return parseFloat(str.replace(/,/g, '')) * mult;
+        };
+
+        challenge.options.forEach((option, index) => {
+            // If we already found a perfect match (string or range), skip
+            if (minDiff === -1) return;
+
+            const optText = option.toLowerCase();
+            let multiplier = 1;
+            if (optText.includes('million')) multiplier = 1000000;
+            if (optText.includes('billion')) multiplier = 1000000000;
+
+            for (const val of rowValues) {
+                if (val === null || val === undefined) continue;
+                const valText = String(val).toLowerCase();
+
+                // 1. Exact string match (e.g. "Man City" in "A) Manchester City")
+                if (typeof val === 'string' && val.length > 1 && optText.includes(valText)) {
+                    bestOptionIndex = index;
+                    minDiff = -1; // Perfect match
+                    return;
+                }
+
+                // Numeric checks
+                const actual = parseFloat(String(val).replace(/,/g, ''));
+                if (isNaN(actual)) continue;
+
+                // 2. Range Match: "Between X and Y"
+                const betweenMatch = option.match(/between\s+([\d,.]+)\s+and\s+([\d,.]+)/i);
+                if (betweenMatch) {
+                    const min = parseNum(betweenMatch[1], multiplier);
+                    const max = parseNum(betweenMatch[2], multiplier);
+                    if (actual >= min && actual <= max) {
+                        bestOptionIndex = index;
+                        minDiff = -1;
+                        return;
+                    }
+                }
+
+                // 3. Inequality Match ("Less than", "More than")
+                const lessMatch = option.match(/(?:less than|under)\s+([\d,.]+)/i);
+                if (lessMatch && actual < parseNum(lessMatch[1], multiplier)) {
+                    bestOptionIndex = index;
+                    minDiff = -1;
+                    return;
+                }
+
+                const moreMatch = option.match(/(?:more than|over|greater than)\s+([\d,.]+)/i);
+                if (moreMatch && actual > parseNum(moreMatch[1], multiplier)) {
+                    bestOptionIndex = index;
+                    minDiff = -1;
+                    return;
+                }
+
+                // 4. Proximity Match (Fallback)
+                const numbers = option.match(/(\d[\d,.]*)/g);
+                if (numbers) {
+                    const nums = numbers.map(n => parseNum(n, multiplier)).filter(n => !isNaN(n));
+                    if (nums.length > 0) {
+                        const closest = nums.reduce((prev, curr) => 
+                            Math.abs(curr - actual) < Math.abs(prev - actual) ? curr : prev
+                        );
+                        const diff = Math.abs(closest - actual);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestOptionIndex = index;
+                        }
+                    }
+                }
+            }
+        });
+
+        if (bestOptionIndex !== -1) {
+            const letters = ['A', 'B', 'C', 'D'];
+            challenge.correctAnswer = letters[bestOptionIndex];
+            challenge.explanation = `Correct Answer: ${rowValues.join(', ')}`;
+        }
+    } catch (err) {
+        console.warn(`[QuizGen] Failed to update challenge ${challenge.id}: ${err.message}`);
+    }
+    return challenge;
+};
+
+const getQuizChallenges = async (db) => {
+    return Promise.all(quizChallenges.map(c => verifyChallenge(db, c)));
+};
+
+module.exports = { quizChallenges, queryChallenges, getQuizChallenges, verifyChallenge };

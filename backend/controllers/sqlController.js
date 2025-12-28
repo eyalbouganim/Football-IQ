@@ -1,5 +1,5 @@
 const { pool } = require('../config/database');
-const { quizChallenges, queryChallenges } = require('../data/sqlChallenges');
+const { quizChallenges, queryChallenges, verifyChallenge } = require('../data/sqlChallenges');
 
 // ========================================
 // 🎯 QUIZ MODE - Multiple Choice
@@ -10,6 +10,7 @@ const getQuizChallenges = async (req, res, next) => {
     try {
         const { difficulty } = req.query;
 
+        // Use static data for listing (much faster, no DB queries needed here)
         let challenges = quizChallenges.map(c => ({
             id: c.id,
             difficulty: c.difficulty,
@@ -44,6 +45,7 @@ const startQuizGame = async (req, res, next) => {
         const { difficulty, count = 5 } = req.query;
         const numQuestions = Math.min(Math.max(parseInt(count) || 5, 1), 10);
 
+        // 1. Filter static challenges first
         let filtered = [...quizChallenges];
         if (difficulty && ['basic', 'medium', 'hard'].includes(difficulty)) {
             filtered = quizChallenges.filter(c => c.difficulty === difficulty);
@@ -53,7 +55,10 @@ const startQuizGame = async (req, res, next) => {
         const shuffled = filtered.sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, numQuestions);
 
-        const questions = selected.map(c => ({
+        // 2. Verify ONLY the selected questions (5 queries instead of 25+)
+        const verifiedQuestions = await Promise.all(selected.map(c => verifyChallenge(pool, c)));
+
+        const questions = verifiedQuestions.map(c => ({
             id: c.id,
             difficulty: c.difficulty,
             category: c.category,
@@ -82,10 +87,14 @@ const submitQuizAnswer = async (req, res, next) => {
         const { id } = req.params;
         const { answer } = req.body;
 
-        const challenge = quizChallenges.find(c => c.id === parseInt(id));
-        if (!challenge) {
+        // 1. Find static challenge
+        const staticChallenge = quizChallenges.find(c => c.id === parseInt(id));
+        if (!staticChallenge) {
             return res.status(404).json({ success: false, message: 'Challenge not found' });
         }
+
+        // 2. Verify just this one question (1 query instead of 25+)
+        const challenge = await verifyChallenge(pool, staticChallenge);
 
         if (!answer || !['A', 'B', 'C', 'D'].includes(answer.toUpperCase())) {
             return res.status(400).json({ success: false, message: 'Answer must be A, B, C, or D' });

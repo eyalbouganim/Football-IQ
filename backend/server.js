@@ -14,6 +14,7 @@ const { testConnection } = require('./config/database');
 const app = express();
 
 // Security Middleware
+app.set('trust proxy', 1); 
 app.use(helmet());
 
 // CORS Configuration
