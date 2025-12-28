@@ -1,4 +1,5 @@
 const { User, Question, GameSession, GameAnswer } = require('../models');
+const { pool } = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 
 const startGame = async (req, res, next) => {
@@ -183,12 +184,15 @@ const getLeaderboard = async (req, res, next) => {
         const count = Math.min(parseInt(limit) || 10, 100);
 
         if (period === 'all') {
-            // Include all active users in leaderboard
-            const users = await User.findAll({
-                where: { isActive: true },
-                order: [['totalScore', 'DESC']],
-                limit: count,
-            });
+            // Raw SQL for All-Time Leaderboard
+            const [users] = await pool.query(
+                `SELECT username, favorite_team, total_score, games_played, highest_score 
+                 FROM users 
+                 WHERE is_active = true 
+                 ORDER BY total_score DESC 
+                 LIMIT ?`,
+                [count]
+            );
 
             return res.json({
                 success: true,
@@ -197,43 +201,42 @@ const getLeaderboard = async (req, res, next) => {
                     leaderboard: users.map((u, i) => ({
                         rank: i + 1,
                         username: u.username,
-                        favoriteTeam: u.favoriteTeam,
-                        highestScore: u.highestScore,
-                        totalScore: u.totalScore,
-                        gamesPlayed: u.gamesPlayed
+                        favoriteTeam: u.favorite_team,
+                        highestScore: u.highest_score || 0,
+                        totalScore: u.total_score || 0,
+                        gamesPlayed: u.games_played || 0
                     }))
                 }
             });
         }
 
-        let dateFilter = {};
+        // Calculate date filter for week/month
+        let dateLimit = new Date(0);
         if (period === 'week') {
-            dateFilter = { completedAt: { '[Op.gte]': new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
+            dateLimit = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         } else if (period === 'month') {
-            dateFilter = { completedAt: { '[Op.gte]': new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
+            dateLimit = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         }
 
-        // Model translates keys to snake_case automatically
-        const results = await GameSession.findAll({
-            where: {
-                status: 'completed',
-                ...dateFilter
-            },
-            order: [['score', 'DESC']],
-            limit: count
-        });
+        // Raw SQL for Period Leaderboard (joining game_sessions with users)
+        const [results] = await pool.query(
+            `SELECT u.username, u.favorite_team, gs.score, gs.correct_answers, gs.total_questions, gs.completed_at
+             FROM game_sessions gs
+             JOIN users u ON gs.user_id = u.id
+             WHERE gs.status = 'completed' AND gs.completed_at >= ?
+             ORDER BY gs.score DESC
+             LIMIT ?`,
+            [dateLimit, count]
+        );
 
-        const leaderboard = await Promise.all(results.map(async (r, i) => {
-            const user = await User.findById(r.userId);
-            return {
-                rank: i + 1,
-                username: user ? user.username : 'Unknown',
-                favoriteTeam: user ? user.favoriteTeam : '-',
-                score: r.score,
-                correctAnswers: r.correctAnswers,
-                totalQuestions: r.totalQuestions,
-                completedAt: r.completedAt
-            };
+        const leaderboard = results.map((r, i) => ({
+            rank: i + 1,
+            username: r.username || 'Unknown',
+            favoriteTeam: r.favorite_team || '-',
+            score: r.score,
+            correctAnswers: r.correct_answers,
+            totalQuestions: r.total_questions,
+            completedAt: r.completed_at
         }));
 
         res.json({
@@ -252,16 +255,47 @@ const getUserStats = async (req, res, next) => {
     try {
         const userId = req.userId;
 
+        // 1. Fetch User Model
         const user = await User.findById(userId);
+        if (!user) {
+            return next(new AppError('User not found', 404));
+        }
 
-        const recentGames = await GameSession.findAll({
-            where: { userId, status: 'completed' },
-            order: [['completedAt', 'DESC']],
-            limit: 5,
-        });
+        // 2. Fetch Recent Games
+        // Use raw SQL since GameSession.findAll is not available
+        const [recentGames] = await pool.query(
+            `SELECT * FROM game_sessions 
+             WHERE user_id = ? AND status = 'completed' 
+             ORDER BY completed_at DESC 
+             LIMIT 5`,
+            [userId]
+        );
 
-        const avgScore = recentGames.length > 0
-            ? Math.round(recentGames.reduce((sum, g) => sum + g.score, 0) / recentGames.length)
+        // 3. Fetch Raw Stats (Handle potential pool errors)
+        let stats = {};
+        if (pool) {
+        const [statsRows] = await pool.query(
+            'SELECT total_score, games_played, highest_score FROM users WHERE id = ?',
+            [userId]
+        );
+            stats = statsRows[0] || {};
+        } else {
+            // Fallback if pool is not available
+            console.warn('Database pool not available in gameController, falling back to ORM user object');
+            stats = {
+                total_score: user.totalScore,
+                games_played: user.gamesPlayed,
+                highest_score: user.highestScore
+            };
+        }
+
+        const totalScore = parseInt(stats.total_score || 0);
+        const gamesPlayed = parseInt(stats.games_played || 0);
+        const highestScore = parseInt(stats.highest_score || 0);
+
+        // Calculate average from global stats to include SQL Quiz games
+        const avgScore = gamesPlayed > 0
+            ? Math.round(totalScore / gamesPlayed)
             : 0;
 
         res.json({
@@ -269,22 +303,22 @@ const getUserStats = async (req, res, next) => {
             data: {
                 user: {
                     username: user.username,
-                    favoriteTeam: user.favoriteTeam,
-                    totalScore: user.totalScore,
-                    gamesPlayed: user.gamesPlayed,
-                    highestScore: user.highestScore,
+                    favoriteTeam: user.favoriteTeam || user.favorite_team,
+                    totalScore: totalScore,
+                    gamesPlayed: gamesPlayed,
+                    highestScore: highestScore,
                     averageScore: avgScore
                 },
                 recentGames: recentGames.map(g => ({
                     score: g.score,
-                    correctAnswers: g.correctAnswers,
-                    totalQuestions: g.totalQuestions,
+                    correctAnswers: g.correctAnswers || g.correct_answers,
+                    totalQuestions: g.totalQuestions || g.total_questions,
                     accuracy: g.totalQuestions > 0
-                        ? Math.round((g.correctAnswers / g.totalQuestions) * 100)
+                        ? Math.round(((g.correctAnswers || g.correct_answers) / (g.totalQuestions || g.total_questions)) * 100)
                         : 0,
                     difficulty: g.difficulty,
-                    completedAt: g.completedAt,
-                    timeSpentSeconds: g.timeSpentSeconds
+                    completedAt: g.completedAt || g.completed_at,
+                    timeSpentSeconds: g.timeSpentSeconds || g.time_spent_seconds
                 }))
             }
         });

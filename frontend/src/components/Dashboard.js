@@ -77,6 +77,22 @@ const Dashboard = () => {
         }
     };
 
+    // Helper to safely get stat values handling both camelCase and snake_case
+    const getStat = (camelKey, snakeKey) => {
+        if (!stats) return 0;
+        return stats[camelKey] ?? stats[snakeKey] ?? 0;
+    };
+
+    const highestScore = getStat('highestScore', 'highest_score');
+    const totalScore = getStat('totalScore', 'total_score');
+    const gamesPlayed = getStat('gamesPlayed', 'games_played');
+    
+    // Calculate average if not provided
+    let averageScore = getStat('averageScore', 'average_score');
+    if (!averageScore && gamesPlayed > 0) {
+        averageScore = Math.round(totalScore / gamesPlayed);
+    }
+
     return (
         <Layout className="main-layout" style={{ minHeight: '100vh' }}>
             <Sider
@@ -178,7 +194,7 @@ const Dashboard = () => {
                                 <div className="icon" style={{ background: 'rgba(0, 217, 165, 0.2)' }}>
                                     <FireOutlined style={{ color: 'var(--primary)' }} />
                                 </div>
-                                <div className="value">{stats?.highestScore || 0}</div>
+                                <div className="value">{highestScore}</div>
                                 <div className="label">Highest Score</div>
                             </div>
                         </Col>
@@ -187,7 +203,7 @@ const Dashboard = () => {
                                 <div className="icon" style={{ background: 'rgba(255, 215, 0, 0.2)' }}>
                                     <TrophyOutlined style={{ color: 'var(--accent-gold)' }} />
                                 </div>
-                                <div className="value">{stats?.totalScore || 0}</div>
+                                <div className="value">{totalScore}</div>
                                 <div className="label">Total Points</div>
                             </div>
                         </Col>
@@ -196,7 +212,7 @@ const Dashboard = () => {
                                 <div className="icon" style={{ background: 'rgba(138, 43, 226, 0.2)' }}>
                                     <ThunderboltOutlined style={{ color: '#8a2be2' }} />
                                 </div>
-                                <div className="value">{stats?.gamesPlayed || 0}</div>
+                                <div className="value">{gamesPlayed}</div>
                                 <div className="label">Games Played</div>
                             </div>
                         </Col>
@@ -205,7 +221,7 @@ const Dashboard = () => {
                                 <div className="icon" style={{ background: 'rgba(255, 107, 107, 0.2)' }}>
                                     <StarOutlined style={{ color: 'var(--error)' }} />
                                 </div>
-                                <div className="value">{stats?.averageScore || 0}</div>
+                                <div className="value">{averageScore}</div>
                                 <div className="label">Avg Score</div>
                             </div>
                         </Col>
@@ -276,4 +292,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
