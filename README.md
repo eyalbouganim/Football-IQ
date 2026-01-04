@@ -1,6 +1,6 @@
 # Football-IQ ⚽
 
-An interactive SQL learning game using real football data! Practice aggregation queries (GROUP BY, JOINs, HAVING) on a real MySQL database. Built as part of the Databases workshop.
+An interactive SQL learning game using real football data! Practice complex SQL queries, with techniques like aggregation (GROUP BY, JOINs, HAVING) on a real MySQL database. Built as part of the Databases workshop.
 
 ---
 
@@ -21,7 +21,6 @@ An interactive SQL learning game using real football data! Practice aggregation 
 - `competitions.csv`
 - `appearances.csv`
 - `transfers.csv`
-- `game_events.csv` *(Optional but recommended)*
 
 **Without these files, the SQL challenges won't work!**
 
@@ -74,6 +73,7 @@ npm install
 - `transfers.csv`
 
 **Data source:** Transfermarkt Football Data or ask your team member for the files.
+**Link:** [https://www.kaggle.com/datasets/davidcariboo/player-scores]
 
 ### 3. Setup Database
 
@@ -125,7 +125,7 @@ npm start
 
 ## Performance & Optimization
 
-To ensure the application runs smoothly with over 50,000+ records, we implemented strategic B-Tree Indexes in MySQL.
+To ensure the application runs smoothly with over 100,000+ records, we implemented strategic B-Tree Indexes in MySQL.
 
 **Why we chose these indexes:**
 
