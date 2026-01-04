@@ -1,3 +1,63 @@
+# Football-IQ ⚽
+
+An interactive SQL learning game using real football data! Practice aggregation queries (GROUP BY, JOINs, HAVING) on a real MySQL database. Built as part of the Databases workshop.
+
+---
+
+## ⚠️ DATA SETUP REQUIRED ⚠️
+
+**The CSV data files are NOT included in this repository!**
+
+**You need to:**
+1. **Create a `db/` folder** in the project root.
+2. **Put ALL the CSV files inside the `db/` folder.**
+3. **Configure your MySQL connection** in `.env`.
+4. **Run `npm run setup`** to initialize the database and load data.
+
+**Required CSV files:**
+- `players.csv`
+- `clubs.csv`
+- `games.csv`
+- `competitions.csv`
+- `appearances.csv`
+- `transfers.csv`
+- `game_events.csv` *(Optional but recommended)*
+
+**Without these files, the SQL challenges won't work!**
+
+---
+
+## Features
+
+- 🎯 **15 SQL Challenges** - From easy GROUP BY to expert subqueries
+- 📊 **Real Football Data** - 10,000+ players, 20,000+ games, transfers & more
+- ⚡ **Optimized Performance** - Indexed MySQL database for fast complex queries
+- 💻 **Live Query Editor** - Write and execute SQL against real data
+- 🏆 **Leaderboard** - Compete with other players
+- 🎮 **Trivia Mode** - Football knowledge quiz
+- 🔐 **User Authentication** - Track your progress
+
+## Tech Stack
+
+- **Backend:** Node.js, Express.js, MySQL (mysql2 driver)
+- **Frontend:** React 19, Ant Design, React Router
+- **Database:** MySQL 8.0+ with raw SQL implementation
+- **Security:** Helmet, CORS, Rate Limiting, bcrypt
+
+## Quick Start
+
+### 1. Clone & Install
+
+```bash
+git clone [https://github.com/eyalbouganim/Football-IQ.git](https://github.com/eyalbouganim/Football-IQ.git)
+cd Football-IQ
+
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
 npm install
 ```
 
@@ -6,12 +66,12 @@ npm install
 ⚠️ **CSV files are not included in the repo.** Download them and place in `db/` folder:
 
 **Required CSV files:**
-* `players.csv`
-* `clubs.csv`
-* `games.csv`
-* `competitions.csv`
-* `appearances.csv`
-* `transfers.csv`
+- `players.csv`
+- `clubs.csv`
+- `games.csv`
+- `competitions.csv`
+- `appearances.csv`
+- `transfers.csv`
 
 **Data source:** Transfermarkt Football Data or ask your team member for the files.
 
@@ -59,10 +119,9 @@ npm start
 ```
 
 ### 5. Open in Browser
-
-* **App:** http://localhost:3000
-* **API:** http://localhost:3001
-* **Demo Account:** `demo` / `Demo@123!`
+- **App:** http://localhost:3000
+- **API:** http://localhost:3001
+- **Demo Account:** `demo` / `Demo@123!`
 
 ## Performance & Optimization
 
@@ -71,23 +130,23 @@ To ensure the application runs smoothly with over 50,000+ records, we implemente
 **Why we chose these indexes:**
 
 ### 1. Games & Seasons
-* **Index:** `idx_games_date` on `games(date)`
-* **Index:** `idx_games_competition_season` on `games(competition_id, season)`
-* **Reasoning:** The "Match Feed" and "Results" pages heavily utilize `ORDER BY date DESC`. Without an index, the database would perform a "filesort" (sorting in memory) on 20,000+ rows every time the page loads. The compound index on Competition+Season allows instant filtering for specific league tables.
+- **Index:** `idx_games_date` on `games(date)`
+- **Index:** `idx_games_competition_season` on `games(competition_id, season)`
+- **Reasoning:** The "Match Feed" and "Results" pages heavily utilize `ORDER BY date DESC`. Without an index, the database would perform a "filesort" (sorting in memory) on 20,000+ rows every time the page loads. The compound index on Competition+Season allows instant filtering for specific league tables.
 
 ### 2. Player Search & Filtering
-* **Index:** `idx_players_name` on `players(name)`
-* **Index:** `idx_players_current_club` on `players(current_club_id)`
-* **Reasoning:** The search bar uses `LIKE` queries. While standard B-Trees have limits with wildcards, this index optimizes exact matches and prefix searches. The Club index allows the "Squad View" to load instantly by jumping directly to players belonging to a specific `club_id`.
+- **Index:** `idx_players_name` on `players(name)`
+- **Index:** `idx_players_current_club` on `players(current_club_id)`
+- **Reasoning:** The search bar uses `LIKE` queries. While standard B-Trees have limits with wildcards, this index optimizes exact matches and prefix searches. The Club index allows the "Squad View" to load instantly by jumping directly to players belonging to a specific `club_id`.
 
 ### 3. Deep Statistical Joins (Appearances)
-* **Index:** `idx_appearances_game` on `appearances(game_id)`
-* **Index:** `idx_appearances_player` on `appearances(player_id)`
-* **Reasoning:** This is the most critical optimization. Calculating "Top Scorers" or "Match Lineups" requires joining the `appearances` table (containing player stats for every match) with `players` and `games`. These Foreign Key indexes allow MySQL to perform fast lookups (EqRef) instead of full table scans (All) during JOIN operations.
+- **Index:** `idx_appearances_game` on `appearances(game_id)`
+- **Index:** `idx_appearances_player` on `appearances(player_id)`
+- **Reasoning:** This is the most critical optimization. Calculating "Top Scorers" or "Match Lineups" requires joining the `appearances` table (containing player stats for every match) with `players` and `games`. These Foreign Key indexes allow MySQL to perform fast lookups (EqRef) instead of full table scans (All) during JOIN operations.
 
 ### 4. Leaderboards
-* **Index:** `idx_users_total_score` on `users(total_score)`
-* **Reasoning:** The leaderboard needs to show the top 10 players sorted by score. This index allows the database to retrieve the top 10 pointers immediately without sorting the entire user base.
+- **Index:** `idx_users_total_score` on `users(total_score)`
+- **Reasoning:** The leaderboard needs to show the top 10 players sorted by score. This index allows the database to retrieve the top 10 pointers immediately without sorting the entire user base.
 
 ## SQL Challenges
 
@@ -134,18 +193,18 @@ Football-IQ/
 ## Database Schema
 
 ### Game System:
-* **users:** Authentication & scores
-* **questions:** Trivia questions
-* **game_sessions:** Tracks user game history
-* **game_answers:** Tracks individual answers
+- **users:** Authentication & scores
+- **questions:** Trivia questions
+- **game_sessions:** Tracks user game history
+- **game_answers:** Tracks individual answers
 
 ### Football Data:
-* **players:** player_id, name, position, market_value
-* **clubs:** club_id, name, stadium_name
-* **games:** game_id, scores, date, season
-* **appearances:** stats (goals, cards) linking players to games
-* **transfers:** transfer history and fees
-* **competitions:** league metadata
+- **players:** player_id, name, position, market_value
+- **clubs:** club_id, name, stadium_name
+- **games:** game_id, scores, date, season
+- **appearances:** stats (goals, cards) linking players to games
+- **transfers:** transfer history and fees
+- **competitions:** league metadata
 
 ## Team
 Built for the Databases Workshop
