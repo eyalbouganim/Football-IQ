@@ -299,7 +299,24 @@ const createGameTables = async () => {
         )
     `);
 
+    // Adding Indexes
+    console.log('⚡ Applying Indexes...');
+    
+    // Questions: Optimizes fetching random active questions by difficulty
+    await pool.query('CREATE INDEX idx_questions_active_difficulty ON questions(is_active, difficulty)');
+    await pool.query('CREATE INDEX idx_questions_category ON questions(category)');
+
+    // Users: Optimizes Leaderboard sorting
+    await pool.query('CREATE INDEX idx_users_total_score ON users(total_score)');
+    await pool.query('CREATE INDEX idx_users_highest_score ON users(highest_score)');
+
+    // Game Sessions: Optimizes fetching user history
+    await pool.query('CREATE INDEX idx_sessions_user_id ON game_sessions(user_id)');
+    // -----------------------------
+
     console.log('✅ Game Tables created');
+
+    console.log('✅ Indexes created');
 };
 
 const seedDatabase = async () => {

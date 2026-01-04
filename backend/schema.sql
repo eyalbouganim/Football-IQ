@@ -213,3 +213,25 @@ CREATE TABLE IF NOT EXISTS game_events (
     FOREIGN KEY (game_id) REFERENCES games(game_id),
     FOREIGN KEY (player_id) REFERENCES players(player_id)
 );
+
+-- --------------------------------------------------------
+-- 3. INDEXES (Performance Optimization)
+-- --------------------------------------------------------
+
+-- Games: Filtering by date, club history, and season lookup
+CREATE INDEX idx_games_date ON games(date);
+CREATE INDEX idx_games_home_club_date ON games(home_club_id, date);
+CREATE INDEX idx_games_away_club_date ON games(away_club_id, date);
+CREATE INDEX idx_games_competition_season ON games(competition_id, season);
+
+-- Players: Searching by name and filtering by club
+CREATE INDEX idx_players_current_club ON players(current_club_id);
+CREATE INDEX idx_players_name ON players(name);
+
+-- Appearances: Joining stats for specific games or players
+CREATE INDEX idx_appearances_game ON appearances(game_id);
+CREATE INDEX idx_appearances_player ON appearances(player_id);
+
+-- Transfers: Sorting timeline and player history
+CREATE INDEX idx_transfers_date ON transfers(transfer_date);
+CREATE INDEX idx_transfers_player_date ON transfers(player_id, transfer_date);
