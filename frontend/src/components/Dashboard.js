@@ -19,8 +19,6 @@ const { Sider, Content } = Layout;
 const Dashboard = () => {
     const [collapsed, setCollapsed] = useState(false);
     const [stats, setStats] = useState(null);
-    const [recentGames, setRecentGames] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [logoutModalVisible, setLogoutModalVisible] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
@@ -35,11 +33,8 @@ const Dashboard = () => {
         try {
             const response = await gameAPI.getStats();
             setStats(response.data.data.user);
-            setRecentGames(response.data.data.recentGames || []);
         } catch (error) {
             console.error('Failed to fetch stats:', error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -226,54 +221,6 @@ const Dashboard = () => {
                             </div>
                         </Col>
                     </Row>
-
-                    {/* Recent Games */}
-                    <Card title="Recent Games" loading={loading}>
-                        {recentGames.length > 0 ? (
-                            <div>
-                                {recentGames.map((game, index) => (
-                                    <div 
-                                        key={index}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '12px 0',
-                                            borderBottom: index < recentGames.length - 1 
-                                                ? '1px solid rgba(255,255,255,0.1)' 
-                                                : 'none'
-                                        }}
-                                    >
-                                        <div>
-                                            <div style={{ fontWeight: 500 }}>
-                                                {game.correctAnswers}/{game.totalQuestions} correct
-                                            </div>
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                                                {game.difficulty} • {new Date(game.completedAt).toLocaleDateString()}
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ 
-                                                fontSize: 20, 
-                                                fontWeight: 700, 
-                                                color: 'var(--primary)' 
-                                            }}>
-                                                {game.score}
-                                            </div>
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                                                {game.accuracy}% accuracy
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
-                                <PlayCircleOutlined style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }} />
-                                <p>No games played yet. Start your first game!</p>
-                            </div>
-                        )}
-                    </Card>
                 </Content>
             </Layout>
 

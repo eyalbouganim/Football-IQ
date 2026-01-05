@@ -285,30 +285,41 @@ const submitQueryAnswer = async (req, res, next) => {
             const [expectedRows] = await pool.query(challenge.expectedQuery);
             expectedResults = expectedRows;
 
-            // Validate results
+            // Validate results - must match row count AND have correct columns
             if (challenge.validateFn(userResults)) {
-                // Check if results match roughly
                 if (userResults.length > 0 && expectedResults.length > 0) {
                     const userCols = Object.keys(userResults[0]).length;
                     const expectedCols = Object.keys(expectedResults[0]).length;
+                    const rowCountMatch = userResults.length === expectedResults.length;
+                    const colCountMatch = userCols >= expectedCols - 1;
 
-                    if (userCols >= expectedCols - 1 && userResults.length === expectedResults.length) {
-                        isCorrect = true;
-                        feedback = '✅ Great job! Your query produces correct results.';
-                    } else if (userCols >= expectedCols - 1) {
-                        isCorrect = true;
-                        feedback = '✅ Correct logic! Result count may vary slightly.';
+                    if (rowCountMatch && colCountMatch) {
+                        // Check if first row data roughly matches (spot check)
+                        const userFirstValues = Object.values(userResults[0]).map(v => String(v).toLowerCase());
+                        const expectedFirstValues = Object.values(expectedResults[0]).map(v => String(v).toLowerCase());
+                        const hasMatchingData = expectedFirstValues.some(ev => userFirstValues.includes(ev));
+                        
+                        if (hasMatchingData) {
+                            isCorrect = true;
+                            feedback = '✅ Great job! Your query produces correct results.';
+                        } else {
+                            feedback = '❌ Wrong answer. Your query returns different data than expected.';
+                        }
+                    } else if (!rowCountMatch) {
+                        feedback = `❌ Wrong answer. Expected ${expectedResults.length} rows but got ${userResults.length}.`;
                     } else {
-                        feedback = '⚠️ Query runs but may be missing columns.';
+                        feedback = '❌ Wrong answer. Missing required columns.';
                     }
                 } else if (userResults.length === 0 && expectedResults.length === 0) {
                     isCorrect = true;
                     feedback = '✅ Correct! Both return empty as expected.';
+                } else if (userResults.length === 0) {
+                    feedback = `❌ Wrong answer. Your query returned no results, expected ${expectedResults.length} rows.`;
                 } else {
-                    feedback = '⚠️ Query runs but returns different row count.';
+                    feedback = `❌ Wrong answer. Expected no results but got ${userResults.length} rows.`;
                 }
             } else {
-                feedback = '⚠️ Query runs but doesn\'t meet the requirements.';
+                feedback = '❌ Wrong answer. Query doesn\'t meet the requirements.';
             }
         } catch (sqlError) {
             feedback = `❌ SQL Error: ${sqlError.message}`;
@@ -340,7 +351,7 @@ const submitQueryAnswer = async (req, res, next) => {
                 userResults: (userResults || []).slice(0, 20),
                 expectedSample: !isCorrect ? (expectedResults || []).slice(0, 5) : null,
                 hint: !isCorrect ? challenge.hint : null,
-                solution: isCorrect ? challenge.expectedQuery : null
+                solution: challenge.expectedQuery // Always show solution for learning
             }
         });
     } catch (error) {

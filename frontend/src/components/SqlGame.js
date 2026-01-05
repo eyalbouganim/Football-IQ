@@ -39,8 +39,18 @@ const SqlGame = () => {
     const [submitting, setSubmitting] = useState(false);
     const [feedback, setFeedback] = useState(null);
     const [difficulty, setDifficulty] = useState('all');
+    const [runCount, setRunCount] = useState(0);
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    // Get max runs based on challenge difficulty
+    const getMaxRuns = (diff) => {
+        const limits = { basic: 3, medium: 4, hard: 5 };
+        return limits[diff] || 3;
+    };
+
+    const maxRuns = selectedChallenge ? getMaxRuns(selectedChallenge.difficulty) : 3;
+    const runsRemaining = maxRuns - runCount;
 
     useEffect(() => {
         fetchChallenges();
@@ -76,6 +86,7 @@ const SqlGame = () => {
             setQuery('');
             setResults(null);
             setFeedback(null);
+            setRunCount(0); // Reset run counter for new challenge
         } catch (error) {
             message.error('Failed to load challenge details');
         }
@@ -86,17 +97,23 @@ const SqlGame = () => {
             message.warning('Please enter a SQL query');
             return;
         }
+        if (runCount >= maxRuns) {
+            message.warning('No runs remaining! You must submit your answer.');
+            return;
+        }
         setExecuting(true);
         setResults(null);
         setFeedback(null);
         try {
             const response = await sqlQueryAPI.executeQuery(query);
             setResults(response.data.data);
+            setRunCount(prev => prev + 1); // Increment run counter
         } catch (error) {
             setFeedback({
                 type: 'error',
                 message: error.response?.data?.error || error.response?.data?.message || 'Query execution failed'
             });
+            setRunCount(prev => prev + 1); // Count failed runs too
         } finally {
             setExecuting(false);
         }
@@ -453,15 +470,24 @@ JOIN players p ON a.player_id = p.player_id`}
                                             resize: 'vertical'
                                         }}
                                     />
-                                    <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                                    <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
                                         <Button 
                                             type="default" 
                                             icon={<PlayCircleOutlined />}
                                             onClick={executeQuery}
                                             loading={executing}
+                                            disabled={runCount >= maxRuns}
                                         >
                                             Run Query
                                         </Button>
+                                        <Tag 
+                                            color={runsRemaining > 1 ? 'green' : runsRemaining === 1 ? 'orange' : 'red'}
+                                            style={{ margin: 0, fontSize: 12, padding: '2px 8px' }}
+                                        >
+                                            {runsRemaining > 0 
+                                                ? `${runsRemaining}/${maxRuns} runs left` 
+                                                : 'No runs left'}
+                                        </Tag>
                                         <Button 
                                             type="primary" 
                                             icon={<CheckCircleOutlined />}
