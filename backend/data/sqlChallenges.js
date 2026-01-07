@@ -676,6 +676,21 @@ LIMIT 10;`,
         validateFn: (results) => results.length === 10
     },
 
+    {
+        id: 106,
+        difficulty: 'medium',
+        points: 25,
+        category: 'Mixed',
+        table: 'games,clubs',
+        title: 'List All Officials',
+        description: 'Create a single list of all Referees (from games) and all Coaches (from clubs). Return the name and their role ("Referee" or "Coach").',
+        hint: 'Use UNION to combine results from two SELECT statements.',
+        expectedQuery: `SELECT referee AS name, 'Referee' AS role FROM games WHERE referee IS NOT NULL
+UNION
+SELECT coach_name AS name, 'Coach' AS role FROM clubs WHERE coach_name IS NOT NULL;`,
+        validateFn: (results) => results.length > 0 && results[0].role !== undefined
+    },
+
     // ========== MEDIUM (25 points) ==========
     {
         id: 201,

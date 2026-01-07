@@ -107,13 +107,18 @@ const SqlGame = () => {
         try {
             const response = await sqlQueryAPI.executeQuery(query);
             setResults(response.data.data);
-            setRunCount(prev => prev + 1); // Increment run counter
+            
+            // --- FIXED LOGIC: Only increment on successful execution ---
+            setRunCount(prev => prev + 1); 
+            // ----------------------------------------------------------
+            
         } catch (error) {
             setFeedback({
                 type: 'error',
                 message: error.response?.data?.error || error.response?.data?.message || 'Query execution failed'
             });
-            setRunCount(prev => prev + 1); // Count failed runs too
+            // Do NOT increment setRunCount here. 
+            // Users should not be penalized for syntax errors.
         } finally {
             setExecuting(false);
         }

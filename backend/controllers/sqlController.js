@@ -10,7 +10,7 @@ const getQuizChallenges = async (req, res, next) => {
     try {
         const { difficulty } = req.query;
 
-        // Use static data for listing (much faster, no DB queries needed here)
+        // Use static data for listing
         let challenges = quizChallenges.map(c => ({
             id: c.id,
             difficulty: c.difficulty,
@@ -43,6 +43,8 @@ const getQuizChallenges = async (req, res, next) => {
 const startQuizGame = async (req, res, next) => {
     try {
         const { difficulty, count = 5 } = req.query;
+        console.log(`[SQL QUIZ] Starting new game. Diff: ${difficulty}, Count: ${count}`);
+        
         const numQuestions = Math.min(Math.max(parseInt(count) || 5, 1), 10);
 
         // 1. Filter static challenges first
@@ -55,7 +57,7 @@ const startQuizGame = async (req, res, next) => {
         const shuffled = filtered.sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, numQuestions);
 
-        // 2. Verify ONLY the selected questions (5 queries instead of 25+)
+        // 2. Verify ONLY the selected questions
         const verifiedQuestions = await Promise.all(selected.map(c => verifyChallenge(pool, c)));
 
         const questions = verifiedQuestions.map(c => ({
@@ -81,11 +83,13 @@ const startQuizGame = async (req, res, next) => {
     }
 };
 
-// Submit quiz answer (scores are now updated at game end, not per question)
+// Submit quiz answer
 const submitQuizAnswer = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { answer } = req.body;
+
+        console.log(`[SQL QUIZ] Submitting Answer for Q${id}. User picked: ${answer}`);
 
         // 1. Find static challenge
         const staticChallenge = quizChallenges.find(c => c.id === parseInt(id));
@@ -93,8 +97,17 @@ const submitQuizAnswer = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Challenge not found' });
         }
 
-        // 2. Verify just this one question (1 query instead of 25+)
+        // 2. Verify just this one question
         const challenge = await verifyChallenge(pool, staticChallenge);
+
+        // --- LOGGING THE QUERY ---
+        console.log('------------------------------------------------');
+        console.log('[SQL QUIZ] Running verification query:');
+        console.log(challenge.query);
+        console.log(`[SQL QUIZ] Correct Answer ID: ${challenge.correctAnswer}`);
+        console.log(`[SQL QUIZ] Explanation: ${challenge.explanation}`);
+        console.log('------------------------------------------------');
+        // -------------------------
 
         if (!answer || !['A', 'B', 'C', 'D'].includes(answer.toUpperCase())) {
             return res.status(400).json({ success: false, message: 'Answer must be A, B, C, or D' });
@@ -103,7 +116,7 @@ const submitQuizAnswer = async (req, res, next) => {
         const isCorrect = answer.toUpperCase() === challenge.correctAnswer;
         const pointsEarned = isCorrect ? challenge.points : 0;
 
-        // Note: User scores are updated at game end via endQuizGame endpoint
+        console.log(`[SQL QUIZ] Result: ${isCorrect ? '✅ CORRECT' : '❌ WRONG'}`);
 
         res.json({
             success: true,
@@ -126,21 +139,17 @@ const endQuizGame = async (req, res, next) => {
         const { totalScore, correctCount, totalQuestions } = req.body;
         const userId = req.userId;
 
-        console.log('[endQuizGame] Called with:', { totalScore, correctCount, totalQuestions, userId });
+        console.log('[SQL QUIZ END] Stats:', { totalScore, correctCount, totalQuestions, userId });
 
         if (!userId) {
-            console.log('[endQuizGame] No userId - not authenticated');
             return res.status(401).json({ success: false, message: 'User not authenticated' });
         }
 
         if (typeof totalScore !== 'number' || totalScore < 0) {
-            console.log('[endQuizGame] Invalid score:', totalScore);
             return res.status(400).json({ success: false, message: 'Invalid score' });
         }
 
         try {
-            // Update user stats - increment games_played once, add to total_score, update highest_score if this game was better
-            console.log('[endQuizGame] Updating user', userId, 'with score:', totalScore);
             await pool.query(
                 `UPDATE users 
                  SET total_score = total_score + ?, 
@@ -150,10 +159,8 @@ const endQuizGame = async (req, res, next) => {
                 [totalScore, totalScore, userId]
             );
 
-            // Get updated user data
             const [users] = await pool.query('SELECT username, total_score, games_played, highest_score FROM users WHERE id = ?', [userId]);
             const user = users[0];
-            console.log('[endQuizGame] Updated user:', user);
 
             res.json({
                 success: true,
@@ -172,7 +179,6 @@ const endQuizGame = async (req, res, next) => {
             return res.status(500).json({ success: false, message: 'Failed to save score' });
         }
     } catch (error) {
-        console.error('[endQuizGame] Error:', error);
         next(error);
     }
 };
@@ -259,7 +265,13 @@ const submitQueryAnswer = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Query is required' });
         }
 
-        // Security check - only SELECT allowed
+        // --- LOG: User Query ---
+        console.log('================================================');
+        console.log(`[QUERY CHALLENGE] ID: ${id} (${challenge.title})`);
+        console.log(`[QUERY CHALLENGE] User SQL:`);
+        console.log(query);
+        // -----------------------
+
         const normalizedQuery = query.trim().toUpperCase();
         if (!normalizedQuery.startsWith('SELECT')) {
             return res.status(400).json({ success: false, message: 'Only SELECT queries allowed' });
@@ -285,50 +297,56 @@ const submitQueryAnswer = async (req, res, next) => {
             const [expectedRows] = await pool.query(challenge.expectedQuery);
             expectedResults = expectedRows;
 
-            // Validate results - must match row count AND have correct columns
-            if (challenge.validateFn(userResults)) {
-                if (userResults.length > 0 && expectedResults.length > 0) {
-                    const userCols = Object.keys(userResults[0]).length;
-                    const expectedCols = Object.keys(expectedResults[0]).length;
-                    const rowCountMatch = userResults.length === expectedResults.length;
-                    const colCountMatch = userCols >= expectedCols - 1;
+            // --- LOG: Results Comparison ---
+            console.log(`[QUERY CHALLENGE] User Rows: ${userResults.length} | Expected Rows: ${expectedResults.length}`);
+            // -------------------------------
 
-                    if (rowCountMatch && colCountMatch) {
-                        // Check if first row data roughly matches (spot check)
-                        const userFirstValues = Object.values(userResults[0]).map(v => String(v).toLowerCase());
-                        const expectedFirstValues = Object.values(expectedResults[0]).map(v => String(v).toLowerCase());
-                        const hasMatchingData = expectedFirstValues.some(ev => userFirstValues.includes(ev));
-                        
-                        if (hasMatchingData) {
-                            isCorrect = true;
-                            feedback = '✅ Great job! Your query produces correct results.';
-                        } else {
-                            feedback = '❌ Wrong answer. Your query returns different data than expected.';
-                        }
-                    } else if (!rowCountMatch) {
-                        feedback = `❌ Wrong answer. Expected ${expectedResults.length} rows but got ${userResults.length}.`;
-                    } else {
-                        feedback = '❌ Wrong answer. Missing required columns.';
-                    }
-                } else if (userResults.length === 0 && expectedResults.length === 0) {
+            // Validate results
+            if (challenge.validateFn(userResults)) {
+                // Strict JSON compare (Added from our previous fix)
+                const userJSON = JSON.stringify(userResults);
+                const expectedJSON = JSON.stringify(expectedResults);
+
+                if (userJSON === expectedJSON) {
                     isCorrect = true;
-                    feedback = '✅ Correct! Both return empty as expected.';
-                } else if (userResults.length === 0) {
-                    feedback = `❌ Wrong answer. Your query returned no results, expected ${expectedResults.length} rows.`;
+                    feedback = '✅ Great job! Your query produces correct results.';
                 } else {
-                    feedback = `❌ Wrong answer. Expected no results but got ${userResults.length} rows.`;
+                    // Logic to give hints
+                    if (userResults.length !== expectedResults.length) {
+                        feedback = `❌ Wrong answer. Expected ${expectedResults.length} rows but got ${userResults.length}.`;
+                    } else if (userResults.length > 0 && expectedResults.length > 0) {
+                        const userCols = Object.keys(userResults[0]);
+                        const expectedCols = Object.keys(expectedResults[0]);
+                        
+                        if (userCols.length !== expectedCols.length) {
+                            feedback = `❌ Wrong answer. Expected ${expectedCols.length} columns but got ${userCols.length}.`;
+                        } else {
+                            const diffCols = expectedCols.filter(col => !userCols.includes(col));
+                            if (diffCols.length > 0) {
+                                feedback = `❌ Wrong answer. Missing columns: ${diffCols.join(', ')}`;
+                            } else {
+                                feedback = '❌ Wrong answer. The data values do not match. Check your sorting (ORDER BY) or filtering.';
+                            }
+                        }
+                    } else if (userResults.length === 0) {
+                        feedback = `❌ Wrong answer. Your query returned no results.`;
+                    } else {
+                         feedback = '❌ Wrong answer. Data mismatch.';
+                    }
                 }
             } else {
-                feedback = '❌ Wrong answer. Query doesn\'t meet the requirements.';
+                feedback = '❌ Wrong answer. Query doesn\'t meet the specific requirements (check column names or filters).';
             }
         } catch (sqlError) {
             feedback = `❌ SQL Error: ${sqlError.message}`;
             userResults = [];
         }
 
+        console.log(`[QUERY CHALLENGE] Outcome: ${isCorrect ? 'SUCCESS' : 'FAIL'} | Feedback: ${feedback}`);
+        console.log('================================================');
+
         const pointsEarned = isCorrect ? challenge.points : 0;
 
-        // Update user total score if correct (challenges add to total but don't count as games)
         if (isCorrect && userId) {
             try {
                 await pool.query(
@@ -351,7 +369,7 @@ const submitQueryAnswer = async (req, res, next) => {
                 userResults: (userResults || []).slice(0, 20),
                 expectedSample: !isCorrect ? (expectedResults || []).slice(0, 5) : null,
                 hint: !isCorrect ? challenge.hint : null,
-                solution: challenge.expectedQuery // Always show solution for learning
+                solution: challenge.expectedQuery 
             }
         });
     } catch (error) {
@@ -367,6 +385,8 @@ const executeQuery = async (req, res, next) => {
         if (!query || typeof query !== 'string') {
             return res.status(400).json({ success: false, message: 'Query is required' });
         }
+
+        console.log(`[SANDBOX SQL] Running: ${query}`);
 
         const normalizedQuery = query.trim().toUpperCase();
         if (!normalizedQuery.startsWith('SELECT')) {
@@ -408,6 +428,12 @@ const executeQuery = async (req, res, next) => {
 // Get database schema with detailed info
 const getSchema = async (req, res, next) => {
     try {
+        // ... (Keep existing Schema definition) ...
+        // (For brevity, assuming you keep the long schema object from before)
+        // If you need me to paste the full schema again, let me know. 
+        // Just make sure to NOT delete it!
+        
+        // PASTE YOUR EXISTING SCHEMA OBJECT HERE
         const schema = {
             tables: [
                 {
@@ -565,38 +591,75 @@ const getSchema = async (req, res, next) => {
                 { from: 'game_events', to: 'games', description: 'Events happen in games', type: 'many-to-one' },
                 { from: 'game_events', to: 'players', description: 'Events involve players', type: 'many-to-one' }
             ],
-            diagram: `
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  competitions   │     │     clubs       │     │    players      │
-├─────────────────┤     ├─────────────────┤     ├─────────────────┤
-│ 🔑 competition_id│◄────│ domestic_comp_id│     │ 🔑 player_id    │
-│    name         │     │ 🔑 club_id      │◄────│    current_club_id
-│    country_name │     │    name         │     │    name         │
-│    type         │     │    stadium_name │     │    position     │
-└─────────────────┘     │    coach_name   │     │    market_value │
-                        └────────┬────────┘     └────────┬────────┘
-                                 │                       │
-        ┌────────────────────────┼───────────────────────┤
-        │                        │                       │
-        ▼                        ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│     games       │     │   transfers     │     │  appearances    │
-├─────────────────┤     ├─────────────────┤     ├─────────────────┤
-│ 🔑 game_id      │     │    player_id ───┼────►│ 🔑 appearance_id│
-│    home_club_id─┼────►│    from_club_id │     │    game_id ─────┼──┐
-│    away_club_id─┼────►│    to_club_id   │     │    player_id ───┼──┤
-│    competition_id     │    transfer_fee │     │    goals        │  │
-│    date, score  │     │    transfer_date│     │    assists      │  │
-└────────┬────────┘     └─────────────────┘     └─────────────────┘  │
-         │                                                           │
-         │              ┌─────────────────┐                          │
-         │              │  game_events    │                          │
-         │              ├─────────────────┤                          │
-         └─────────────►│ 🔑 game_event_id│◄─────────────────────────┘
-                        │    game_id      │
-                        │    player_id    │
-                        │    minute, type │
-                        └─────────────────┘
+            diagram: `┌───────────────────────────────┐       ┌───────────────────────────────┐       ┌───────────────────────────────┐
+│         competitions          │       │             clubs             │       │            players            │
+├───────────────────────────────┤       ├───────────────────────────────┤       ├───────────────────────────────┤
+│ 🔑 competition_id             │◄──────│ 🔑 club_id                    │◄──────│ 🔑 player_id                  │
+│    competition_code           │       │    club_code                  │       │    first_name                 │
+│    name                       │       │    name                       │       │    last_name                  │
+│    sub_type                   │       │    domestic_competition_id    │       │    name                       │
+│    type                       │       │    total_market_value         │       │    last_season                │
+│    country_id                 │       │    squad_size                 │       │    current_club_id            │
+│    country_name               │       │    average_age                │       │    player_code                │
+│    domestic_league_code       │       │    foreigners_number          │       │    country_of_birth           │
+│    confederation              │       │    foreigners_percentage      │       │    city_of_birth              │
+│    is_major_national_league   │       │    national_team_players      │       │    country_of_citizenship     │
+│    url                        │       │    stadium_name               │       │    date_of_birth              │
+└───────────────▲───────────────┘       │    stadium_seats              │       │    sub_position               │
+                │                       │    net_transfer_record        │       │    position                   │
+                │                       │    coach_name                 │       │    foot                       │
+                │                       │    last_season                │       │    height_in_cm               │
+                │                       │    url                        │       │    contract_expiration_date   │
+                │                       └───────────────▲───────────────┘       │    agent_name                 │
+                │                                       │                       │    image_url                  │
+                │                                       │                       │    url                        │
+      ┌─────────┴───────────────────────────────────────┼───────────────────────┤    current_club_dom_comp_id   │
+      │                                                 │                       │    current_club_name          │
+      │                                                 │                       │    market_value_in_eur        │
+      ▼                                                 ▼                       │    highest_market_val_in_eur  │
+┌───────────────────────────────┐       ┌───────────────────────────────┐       └───────────────▲───────────────┘
+│             games             │       │           transfers           │                       │
+├───────────────────────────────┤       ├───────────────────────────────┤                       │
+│ 🔑 game_id                    │       │ 🔑 id                         │                       │
+│    competition_id             │       │    player_id                  │───────────────────────┘
+│    season                     │       │    transfer_date              │
+│    round                      │       │    transfer_season            │
+│    date                       │       │    from_club_id               │
+│    home_club_id               │──────►│    to_club_id                 │
+│    away_club_id               │──────►│    from_club_name             │
+│    home_club_goals            │       │    to_club_name               │
+│    away_club_goals            │       │    transfer_fee               │
+│    home_club_position         │       │    market_value_in_eur        │
+│    away_club_position         │       │    player_name                │
+│    home_club_manager_name     │       └───────────────────────────────┘
+│    away_club_manager_name     │
+│    stadium                    │       ┌───────────────────────────────┐
+│    attendance                 │       │          appearances          │
+│    referee                    │       ├───────────────────────────────┤
+│    url                        │       │ 🔑 appearance_id              │
+│    home_club_formation        │◄──────│    game_id                    │
+│    away_club_formation        │       │    player_id                  │───┐
+│    home_club_name             │       │    player_club_id             │   │
+│    away_club_name             │       │    player_current_club_id     │   │
+│    aggregate                  │       │    date                       │   │
+│    competition_type           │       │    player_name                │   │
+└───────────────▲───────────────┘       │    competition_id             │   │
+                │                       │    yellow_cards               │   │
+                │                       │    red_cards                  │   │
+┌───────────────┴───────────────┐       │    goals                      │   │
+│          game_events          │       │    assists                    │   │
+├───────────────────────────────┤       │    minutes_played             │   │
+│ 🔑 game_event_id              │       └───────────────────────────────┘   │
+│    date                       │                                           │
+│    game_id                    │                                           │
+│    minute                     │                                           │
+│    type                       │                                           │
+│    club_id                    │                                           │
+│    player_id                  │◄──────────────────────────────────────────┘
+│    description                │
+│    player_in_id               │
+│    player_assist_id           │
+└───────────────────────────────┘
 
 🔑 = Primary Key    ──► = Foreign Key Relationship
 `,

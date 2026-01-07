@@ -16,15 +16,8 @@ class User {
 
     // Helper to map JS fields to DB columns
     static toSnakeCase(str) {
-        const map = {
-            favoriteTeam: 'favorite_team',
-            totalScore: 'total_score',
-            gamesPlayed: 'games_played',
-            highestScore: 'highest_score',
-            isActive: 'is_active',
-            userId: 'id'
-        };
-        return map[str] || str;
+        // Converts "favoriteTeam" -> "favorite_team" automatically
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     }
 
     async validatePassword(password) {
