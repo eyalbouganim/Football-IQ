@@ -42,7 +42,7 @@ const SqlGame = () => {
     const [runCount, setRunCount] = useState(0);
     const navigate = useNavigate();
     const { user } = useAuth();
-
+    
     // Get max runs based on challenge difficulty
     const getMaxRuns = (diff) => {
         const limits = { basic: 3, medium: 4, hard: 5 };
@@ -52,11 +52,11 @@ const SqlGame = () => {
     const maxRuns = selectedChallenge ? getMaxRuns(selectedChallenge.difficulty) : 3;
     const runsRemaining = maxRuns - runCount;
 
+    // Fetch challenges and schema on component mount or difficulty change
     useEffect(() => {
         fetchChallenges();
         fetchSchema();
     }, [difficulty]);
-
     const fetchChallenges = async () => {
         setLoading(true);
         try {
@@ -67,7 +67,7 @@ const SqlGame = () => {
             message.error('Failed to load challenges');
         } finally {
             setLoading(false);
-        }
+        } // Fetch schema for database reference
     };
 
     const fetchSchema = async () => {
@@ -76,7 +76,7 @@ const SqlGame = () => {
             setSchema(response.data.data.schema);
         } catch (error) {
             console.error('Failed to load schema');
-        }
+        } // Select a challenge and load its details
     };
 
     const selectChallenge = async (challenge) => {
@@ -87,7 +87,7 @@ const SqlGame = () => {
             setResults(null);
             setFeedback(null);
             setRunCount(0); // Reset run counter for new challenge
-        } catch (error) {
+        } catch (error) { // Execute the user's SQL query in a sandbox
             message.error('Failed to load challenge details');
         }
     };
@@ -107,11 +107,11 @@ const SqlGame = () => {
         try {
             const response = await sqlQueryAPI.executeQuery(query);
             setResults(response.data.data);
-            
-            // --- FIXED LOGIC: Only increment on successful execution ---
+
+            // Only increment on successful execution
             setRunCount(prev => prev + 1); 
-            // ----------------------------------------------------------
-            
+
+
         } catch (error) {
             setFeedback({
                 type: 'error',
@@ -120,7 +120,7 @@ const SqlGame = () => {
             // Do NOT increment setRunCount here. 
             // Users should not be penalized for syntax errors.
         } finally {
-            setExecuting(false);
+        setExecuting(false); // Submit the user's query for evaluation against the challenge
         }
     };
 
@@ -156,7 +156,7 @@ const SqlGame = () => {
                 message: error.response?.data?.message || 'Submission failed'
             });
         } finally {
-            setSubmitting(false);
+        setSubmitting(false); // Helper function to get difficulty color
         }
     };
 
@@ -165,7 +165,7 @@ const SqlGame = () => {
         return colors[diff] || '#1890ff';
     };
 
-    const getDifficultyIcon = (diff) => {
+    const getDifficultyIcon = (diff) => { // Helper function to get difficulty icon
         if (diff === 'basic') return <StarOutlined />;
         if (diff === 'medium') return <FireOutlined />;
         if (diff === 'hard') return <RocketOutlined />;
@@ -175,7 +175,7 @@ const SqlGame = () => {
     return (
         <Layout style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
             <Content style={{ padding: '24px' }}>
-                {/* Header */}
+                {/* Page Header */}
                 <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <Title level={2} style={{ color: '#fff', margin: 0 }}>
@@ -189,7 +189,7 @@ const SqlGame = () => {
                 </div>
 
                 <Row gutter={24}>
-                    {/* Left Panel - Challenge List */}
+                    {/* Left Panel: Challenge List and Schema Reference */}
                     <Col xs={24} lg={8}>
                         <Card 
                             title={
@@ -254,7 +254,7 @@ const SqlGame = () => {
                             </Spin>
                         </Card>
 
-                        {/* Schema Reference */}
+                        {/* Database Schema Reference */}
                         {schema && (
                             <Card 
                                 title={<><DatabaseOutlined /> Database Schema</>}
@@ -419,7 +419,7 @@ JOIN players p ON a.player_id = p.player_id`}
                     </Col>
 
                     {/* Right Panel - Query Editor & Results */}
-                    <Col xs={24} lg={16}>
+                    <Col xs={24} lg={16}> {/* Challenge Description */}
                         {selectedChallenge ? (
                             <>
                                 {/* Challenge Description */}
@@ -453,7 +453,7 @@ JOIN players p ON a.player_id = p.player_id`}
                                     )}
                                 </Card>
 
-                                {/* SQL Editor */}
+                                {/* SQL Query Editor */}
                                 <Card 
                                     title={<><CodeOutlined /> SQL Query Editor</>}
                                     style={{ marginBottom: 16, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}
@@ -511,7 +511,7 @@ JOIN players p ON a.player_id = p.player_id`}
                                     </div>
                                 </Card>
 
-                                {/* Feedback */}
+                                {/* Feedback and Solution */}
                                 {feedback && (
                                     <Alert
                                         type={feedback.type}
@@ -545,7 +545,7 @@ JOIN players p ON a.player_id = p.player_id`}
                                     />
                                 )}
 
-                                {/* Results Table */}
+                                {/* Query Results Table */}
                                 {results && (
                                     <Card 
                                         title={
@@ -578,7 +578,7 @@ JOIN players p ON a.player_id = p.player_id`}
                                 )}
                             </>
                         ) : (
-                            <Card style={{ textAlign: 'center', padding: 60, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}>
+                            <Card style={{ textAlign: 'center', padding: 60, background: 'var(--bg-secondary)', border: '1px solid var(--bg-elevated)' }}> {/* Placeholder when no challenge is selected */}
                                 <CodeOutlined style={{ fontSize: 64, color: 'var(--primary)', opacity: 0.5 }} />
                                 <Title level={3} style={{ marginTop: 24, color: '#fff' }}>Select a Challenge</Title>
                                 <Text type="secondary">

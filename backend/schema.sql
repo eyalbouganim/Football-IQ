@@ -1,6 +1,6 @@
 -- --------------------------------------------------------
--- 1. USER & GAME SYSTEM (Standard Tables)
--- --------------------------------------------------------
+-- User and Game System Tables
+-- These tables manage user accounts, game sessions, and questions for the Football IQ application.
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Questions for the quiz game
 CREATE TABLE IF NOT EXISTS questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     question TEXT NOT NULL,
@@ -32,6 +33,7 @@ CREATE TABLE IF NOT EXISTS questions (
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Records individual game sessions played by users
 CREATE TABLE IF NOT EXISTS game_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -48,6 +50,7 @@ CREATE TABLE IF NOT EXISTS game_sessions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Stores answers given by users for each question within a game session
 CREATE TABLE IF NOT EXISTS game_answers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
@@ -63,10 +66,10 @@ CREATE TABLE IF NOT EXISTS game_answers (
 );
 
 -- --------------------------------------------------------
--- 2. FOOTBALL DATASET (Aligned with all CSV columns)
--- --------------------------------------------------------
+-- Football Dataset Tables
+-- These tables store comprehensive football data, typically loaded from external CSV files.
 
--- 2.1 Competitions
+-- Details about various football competitions (e.g., leagues, cups)
 CREATE TABLE IF NOT EXISTS competitions (
     competition_id VARCHAR(100) PRIMARY KEY,
     competition_code VARCHAR(100),
@@ -81,13 +84,13 @@ CREATE TABLE IF NOT EXISTS competitions (
     url VARCHAR(500)
 );
 
--- 2.2 Clubs
+-- Information about football clubs
 CREATE TABLE IF NOT EXISTS clubs (
     club_id INT PRIMARY KEY,
     club_code VARCHAR(100),
     name VARCHAR(255),
     domestic_competition_id VARCHAR(100),
-    total_market_value BIGINT, -- Requires currency cleaning in loader
+    total_market_value BIGINT, -- Total market value of the club's squad
     squad_size INT,
     average_age DECIMAL(4, 1),
     foreigners_number INT,
@@ -95,14 +98,14 @@ CREATE TABLE IF NOT EXISTS clubs (
     national_team_players INT,
     stadium_name VARCHAR(255),
     stadium_seats INT,
-    net_transfer_record VARCHAR(50), -- Remains VARCHAR as it contains strings like '+€5m'
+    net_transfer_record VARCHAR(50), -- Net transfer balance, can be positive or negative
     coach_name VARCHAR(255),
     last_season INT,
     url VARCHAR(500),
     FOREIGN KEY (domestic_competition_id) REFERENCES competitions(competition_id)
 );
 
--- 2.3 Players
+-- Details about individual football players
 CREATE TABLE IF NOT EXISTS players (
     player_id INT PRIMARY KEY,
     first_name VARCHAR(255),
@@ -130,7 +133,7 @@ CREATE TABLE IF NOT EXISTS players (
     FOREIGN KEY (current_club_id) REFERENCES clubs(club_id)
 );
 
--- 2.4 Games
+-- Records of individual football matches
 CREATE TABLE IF NOT EXISTS games (
     game_id INT PRIMARY KEY,
     competition_id VARCHAR(100),
@@ -160,9 +163,9 @@ CREATE TABLE IF NOT EXISTS games (
     FOREIGN KEY (away_club_id) REFERENCES clubs(club_id)
 );
 
--- 2.5 Appearances (Player Stats in a Game)
+-- Player statistics for each game they appeared in
 CREATE TABLE IF NOT EXISTS appearances (
-    appearance_id VARCHAR(100) PRIMARY KEY, -- Assuming appearance_id is a unique alphanumeric ID
+    appearance_id VARCHAR(100) PRIMARY KEY, -- Unique identifier for each player appearance in a game
     game_id INT,
     player_id INT,
     player_club_id INT,
@@ -180,9 +183,9 @@ CREATE TABLE IF NOT EXISTS appearances (
     FOREIGN KEY (player_club_id) REFERENCES clubs(club_id)
 );
 
--- 2.6 Transfers
+-- Records of player transfers between clubs
 CREATE TABLE IF NOT EXISTS transfers (
-    id INT AUTO_INCREMENT PRIMARY KEY, -- Added an explicit ID for transactions table
+    id INT AUTO_INCREMENT PRIMARY KEY, -- Unique identifier for each transfer record
     player_id INT,
     transfer_date DATE,
     transfer_season VARCHAR(10),
@@ -190,15 +193,15 @@ CREATE TABLE IF NOT EXISTS transfers (
     to_club_id INT,
     from_club_name VARCHAR(255),
     to_club_name VARCHAR(255),
-    transfer_fee BIGINT,       -- Requires currency cleaning in loader
-    market_value_in_eur BIGINT, -- Requires currency cleaning in loader
+    transfer_fee BIGINT,       -- Transfer fee in Euros
+    market_value_in_eur BIGINT, -- Player's market value at the time of transfer in Euros
     player_name VARCHAR(255),
     FOREIGN KEY (player_id) REFERENCES players(player_id),
     FOREIGN KEY (from_club_id) REFERENCES clubs(club_id),
     FOREIGN KEY (to_club_id) REFERENCES clubs(club_id)
 );
 
--- 2.7 Game Events (Optional, but often present in football data)
+-- Detailed events that occurred during a game (e.g., goals, cards, substitutions)
 CREATE TABLE IF NOT EXISTS game_events (
     game_event_id VARCHAR(100) PRIMARY KEY,
     date DATE,
@@ -215,23 +218,23 @@ CREATE TABLE IF NOT EXISTS game_events (
 );
 
 -- --------------------------------------------------------
--- 3. INDEXES (Performance Optimization)
--- --------------------------------------------------------
+-- Indexes for Performance Optimization
+-- These indexes are crucial for speeding up common queries on the football dataset.
 
--- Games: Filtering by date, club history, and season lookup
+-- Indexes for the 'games' table
 CREATE INDEX idx_games_date ON games(date);
 CREATE INDEX idx_games_home_club_date ON games(home_club_id, date);
 CREATE INDEX idx_games_away_club_date ON games(away_club_id, date);
 CREATE INDEX idx_games_competition_season ON games(competition_id, season);
 
--- Players: Searching by name and filtering by club
+-- Indexes for the 'players' table
 CREATE INDEX idx_players_current_club ON players(current_club_id);
 CREATE INDEX idx_players_name ON players(name);
 
--- Appearances: Joining stats for specific games or players
+-- Indexes for the 'appearances' table
 CREATE INDEX idx_appearances_game ON appearances(game_id);
 CREATE INDEX idx_appearances_player ON appearances(player_id);
 
--- Transfers: Sorting timeline and player history
+-- Indexes for the 'transfers' table
 CREATE INDEX idx_transfers_date ON transfers(transfer_date);
 CREATE INDEX idx_transfers_player_date ON transfers(player_id, transfer_date);

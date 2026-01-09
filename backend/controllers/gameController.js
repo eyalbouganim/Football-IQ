@@ -3,14 +3,17 @@ const { pool } = require('../config/database');
 const { AppError } = require('../middleware/errorHandler');
 
 const startGame = async (req, res, next) => {
+    // Controller to initiate a new game session for a user.
     try {
         const { difficulty = 'mixed', questionCount = 10 } = req.body;
         const userId = req.userId;
 
         console.log(`[GAME] Starting game for User ${userId} | Diff: ${difficulty} | Count: ${questionCount}`);
 
+        // Ensure questionCount is within a reasonable range (5-20)
         const count = Math.min(Math.max(parseInt(questionCount) || 10, 5), 20);
         
+        // Fetch random questions based on difficulty and count
         // Use our new random finder
         const questions = await Question.findRandom(count, difficulty);
 
@@ -20,6 +23,7 @@ const startGame = async (req, res, next) => {
             return next(new AppError('No questions available for this difficulty', 404));
         }
 
+        // Create a new game session record in the database
         const session = await GameSession.create({
             userId,
             difficulty,
@@ -49,6 +53,7 @@ const startGame = async (req, res, next) => {
 };
 
 const submitAnswer = async (req, res, next) => {
+    // Controller to handle a user's submission for a single question within a game session.
     try {
         const { sessionId } = req.params;
         const { questionId, answer, timeSpent } = req.body;
@@ -56,12 +61,13 @@ const submitAnswer = async (req, res, next) => {
 
         const session = await GameSession.findOne({
             where: { id: sessionId, userId: userId, status: 'in_progress' }
-        });
+        }); // Find the active game session for the user
 
         if (!session) {
             return next(new AppError('Game session not found or already completed', 404));
         }
 
+        // Check if the question has already been answered in this session
         const existingAnswer = await GameAnswer.findOne({
             where: { sessionId: sessionId, questionId: questionId }
         });
@@ -69,6 +75,7 @@ const submitAnswer = async (req, res, next) => {
         if (existingAnswer) {
             return next(new AppError('Question already answered', 400));
         }
+        // Retrieve the question details from the database
 
         const question = await Question.findById(questionId);
         if (!question) {
@@ -88,10 +95,12 @@ const submitAnswer = async (req, res, next) => {
         console.log(`[QUIZ CHECK] Result: ${isCorrect ? 'PASSED ✅' : 'FAILED ❌'}`);
         console.log('------------------------------------------------');
 
+        // Calculate points earned (0 if incorrect)
         const pointsEarned = isCorrect ? question.points : 0;
 
         await GameAnswer.create({
             sessionId,
+            // Record the user's answer and outcome
             questionId,
             userAnswer: answer,
             isCorrect,
@@ -99,10 +108,12 @@ const submitAnswer = async (req, res, next) => {
             timeSpentSeconds: timeSpent || 0
         });
 
+        // Update the session's score and correct answer count
         const newScore = isCorrect ? session.score + pointsEarned : session.score;
         const newCorrectAnswers = isCorrect ? session.correctAnswers + 1 : session.correctAnswers;
         
         await GameSession.update(sessionId, { score: newScore, correctAnswers: newCorrectAnswers });
+        // Update global question statistics (times answered, times correct)
 
         // Atomic update for stats
         await pool.query(
@@ -113,6 +124,7 @@ const submitAnswer = async (req, res, next) => {
             [isCorrect ? 1 : 0, questionId]
         );
 
+        // Fetch the updated session details to return to the client
         const updatedSession = await GameSession.findById(sessionId);
 
         res.json({
@@ -132,10 +144,12 @@ const submitAnswer = async (req, res, next) => {
 };
 
 const endGame = async (req, res, next) => {
+    // Controller to finalize a game session and update user statistics.
     let connection;
     try {
         const { sessionId } = req.params;
         const userId = req.userId;
+        // Acquire a database connection for transaction management
 
         connection = await pool.getConnection();
         await connection.beginTransaction();
@@ -144,16 +158,19 @@ const endGame = async (req, res, next) => {
             'SELECT * FROM game_sessions WHERE id = ? AND user_id = ?',
             [sessionId, userId]
         );
+        // Fetch the game session
         const session = sessionRows[0];
 
         if (!session) {
             await connection.rollback();
             return next(new AppError('Game session not found', 404));
         }
+        // Calculate the total time spent in the game
 
         const now = new Date();
         const timeSpent = Math.floor((now - new Date(session.started_at)) / 1000);
 
+        // Log game completion details
         console.log(`[GAME END] Session ${sessionId} | Score: ${session.score} | Time: ${timeSpent}s`);
 
         await connection.execute(
@@ -162,6 +179,7 @@ const endGame = async (req, res, next) => {
              WHERE id = ?`,
             [now, timeSpent, sessionId]
         );
+        // Update user's overall game statistics (total score, games played, highest score)
 
         await connection.execute(
             `UPDATE users 
@@ -171,6 +189,7 @@ const endGame = async (req, res, next) => {
              WHERE id = ?`,
             [session.score, session.score, userId]
         );
+        // Commit the transaction if all updates are successful
 
         await connection.commit();
 
@@ -193,11 +212,13 @@ const endGame = async (req, res, next) => {
         next(error);
     } finally {
         if (connection) connection.release();
+        // Release the database connection
     }
 };
 
 const getLeaderboard = async (req, res, next) => {
     try {
+        // Retrieve leaderboard data based on specified limit and period.
         const { limit = 10, period = 'all' } = req.query;
         const count = Math.min(parseInt(limit) || 10, 100);
 
@@ -206,7 +227,7 @@ const getLeaderboard = async (req, res, next) => {
                            FROM users 
                            WHERE is_active = true 
                            ORDER BY total_score DESC 
-                           LIMIT ?`;
+                           LIMIT ?`; // Query for overall leaderboard
             
             console.log(`[SQL LOG] Leaderboard Query: ${query.replace('?', count)}`);
 
@@ -228,6 +249,7 @@ const getLeaderboard = async (req, res, next) => {
             });
         }
 
+        // Determine the date limit for period-based leaderboards (week/month)
         let dateLimit = new Date(0);
         if (period === 'week') {
             dateLimit = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -239,7 +261,7 @@ const getLeaderboard = async (req, res, next) => {
                        FROM game_sessions gs
                        JOIN users u ON gs.user_id = u.id
                        WHERE gs.status = 'completed' AND gs.completed_at >= ?
-                       ORDER BY gs.score DESC
+                       ORDER BY gs.score DESC // Query for period-based leaderboard
                        LIMIT ?`;
 
         console.log(`[SQL LOG] Leaderboard Query (Period: ${period}):`, query);
@@ -266,12 +288,14 @@ const getLeaderboard = async (req, res, next) => {
 };
 
 const getUserStats = async (req, res, next) => {
+    // Controller to fetch a user's personal game statistics and recent game history.
     try {
         const userId = req.userId;
         const user = await User.findById(userId);
         if (!user) return next(new AppError('User not found', 404));
 
         const recentGamesQuery = `SELECT * FROM game_sessions 
+                                  // Fetch the 5 most recent completed games for the user
                                   WHERE user_id = ? AND status = 'completed' 
                                   ORDER BY completed_at DESC 
                                   LIMIT 5`;
@@ -279,6 +303,7 @@ const getUserStats = async (req, res, next) => {
         console.log(`[SQL LOG] Recent Games Query for User ${userId}:`, recentGamesQuery);
 
         const [recentGames] = await pool.query(recentGamesQuery, [userId]);
+        // Calculate average score
 
         const totalScore = parseInt(user.totalScore || 0);
         const gamesPlayed = parseInt(user.gamesPlayed || 0);

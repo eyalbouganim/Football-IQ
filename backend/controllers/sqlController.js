@@ -4,10 +4,10 @@ const { quizChallenges, queryChallenges, verifyChallenge } = require('../data/sq
 // ========================================
 // 🎯 QUIZ MODE - Multiple Choice
 // ========================================
-
-// Get quiz challenges list
+// Controller to fetch a list of available SQL quiz challenges.
 const getQuizChallenges = async (req, res, next) => {
     try {
+        // Extract difficulty from query parameters.
         const { difficulty } = req.query;
 
         // Use static data for listing
@@ -18,6 +18,7 @@ const getQuizChallenges = async (req, res, next) => {
             points: c.points
         }));
 
+        // Filter challenges by difficulty if specified.
         if (difficulty && ['basic', 'medium', 'hard'].includes(difficulty)) {
             challenges = challenges.filter(c => c.difficulty === difficulty);
         }
@@ -39,7 +40,7 @@ const getQuizChallenges = async (req, res, next) => {
     }
 };
 
-// Start a quiz game
+// Controller to start a new SQL quiz game session.
 const startQuizGame = async (req, res, next) => {
     try {
         const { difficulty, count = 5 } = req.query;
@@ -53,10 +54,10 @@ const startQuizGame = async (req, res, next) => {
             filtered = quizChallenges.filter(c => c.difficulty === difficulty);
         }
 
-        // Shuffle and pick questions
+        // Shuffle the filtered questions and select the requested number.
         const shuffled = filtered.sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, numQuestions);
-
+        
         // 2. Verify ONLY the selected questions
         const verifiedQuestions = await Promise.all(selected.map(c => verifyChallenge(pool, c)));
 
@@ -83,10 +84,10 @@ const startQuizGame = async (req, res, next) => {
     }
 };
 
-// Submit quiz answer
+// Controller to submit a user's answer for a SQL quiz question.
 const submitQuizAnswer = async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // Challenge ID from URL parameters.
         const { answer } = req.body;
 
         console.log(`[SQL QUIZ] Submitting Answer for Q${id}. User picked: ${answer}`);
@@ -97,13 +98,13 @@ const submitQuizAnswer = async (req, res, next) => {
             return res.status(404).json({ success: false, message: 'Challenge not found' });
         }
 
-        // 2. Verify just this one question
+        // 2. Verify the specific challenge to get the correct answer and explanation.
         const challenge = await verifyChallenge(pool, staticChallenge);
 
-        // --- LOGGING THE QUERY ---
+        // Log details for debugging and verification.
         console.log('------------------------------------------------');
         console.log('[SQL QUIZ] Running verification query:');
-        console.log(challenge.query);
+        console.log(challenge.query); // The query used to determine the correct answer.
         console.log(`[SQL QUIZ] Correct Answer ID: ${challenge.correctAnswer}`);
         console.log(`[SQL QUIZ] Explanation: ${challenge.explanation}`);
         console.log('------------------------------------------------');
@@ -113,8 +114,10 @@ const submitQuizAnswer = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Answer must be A, B, C, or D' });
         }
 
+        // Check if the user's answer matches the correct answer.
         const isCorrect = answer.toUpperCase() === challenge.correctAnswer;
         const pointsEarned = isCorrect ? challenge.points : 0;
+        // Assign points if the answer is correct.
 
         console.log(`[SQL QUIZ] Result: ${isCorrect ? '✅ CORRECT' : '❌ WRONG'}`);
 
@@ -133,10 +136,10 @@ const submitQuizAnswer = async (req, res, next) => {
     }
 };
 
-// End quiz game and update user stats
+// Controller to finalize a SQL quiz game and update user statistics.
 const endQuizGame = async (req, res, next) => {
     try {
-        const { totalScore, correctCount, totalQuestions } = req.body;
+        const { totalScore, correctCount, totalQuestions } = req.body; // Game results from the client.
         const userId = req.userId;
 
         console.log('[SQL QUIZ END] Stats:', { totalScore, correctCount, totalQuestions, userId });
@@ -149,6 +152,7 @@ const endQuizGame = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Invalid score' });
         }
 
+        // Update user's overall game statistics in the database.
         try {
             await pool.query(
                 `UPDATE users 
@@ -159,6 +163,7 @@ const endQuizGame = async (req, res, next) => {
                 [totalScore, totalScore, userId]
             );
 
+            // Fetch updated user data to return in the response.
             const [users] = await pool.query('SELECT username, total_score, games_played, highest_score FROM users WHERE id = ?', [userId]);
             const user = users[0];
 
@@ -186,10 +191,10 @@ const endQuizGame = async (req, res, next) => {
 // ========================================
 // ✍️ QUERY MODE - Write SQL
 // ========================================
-
-// Get query challenges list
+// Controller to fetch a list of available SQL query challenges.
 const getQueryChallenges = async (req, res, next) => {
     try {
+        // Extract difficulty from query parameters.
         const { difficulty } = req.query;
 
         let challenges = queryChallenges.map(c => ({
@@ -200,6 +205,7 @@ const getQueryChallenges = async (req, res, next) => {
             points: c.points
         }));
 
+        // Filter challenges by difficulty if specified.
         if (difficulty && ['basic', 'medium', 'hard'].includes(difficulty)) {
             challenges = challenges.filter(c => c.difficulty === difficulty);
         }
@@ -221,10 +227,10 @@ const getQueryChallenges = async (req, res, next) => {
     }
 };
 
-// Get single query challenge
+// Controller to fetch details for a single SQL query challenge.
 const getQueryChallenge = async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // Challenge ID from URL parameters.
         const challenge = queryChallenges.find(c => c.id === parseInt(id));
 
         if (!challenge) {
@@ -249,10 +255,10 @@ const getQueryChallenge = async (req, res, next) => {
     }
 };
 
-// Submit query answer
+// Controller to submit a user's SQL query for a challenge and evaluate it.
 const submitQueryAnswer = async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // Challenge ID from URL parameters.
         const { query } = req.body;
         const userId = req.userId;
 
@@ -265,13 +271,13 @@ const submitQueryAnswer = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Query is required' });
         }
 
-        // --- LOG: User Query ---
+        // Log the user's submitted query for debugging.
         console.log('================================================');
         console.log(`[QUERY CHALLENGE] ID: ${id} (${challenge.title})`);
         console.log(`[QUERY CHALLENGE] User SQL:`);
         console.log(query);
         // -----------------------
-
+        // Basic validation for the submitted query.
         const normalizedQuery = query.trim().toUpperCase();
         if (!normalizedQuery.startsWith('SELECT')) {
             return res.status(400).json({ success: false, message: 'Only SELECT queries allowed' });
@@ -291,12 +297,12 @@ const submitQueryAnswer = async (req, res, next) => {
         try {
             // Execute user query
             const [userRows] = await pool.query(query);
-            userResults = userRows;
+            userResults = userRows; // Store results from the user's query.
 
             // Execute expected query
             const [expectedRows] = await pool.query(challenge.expectedQuery);
-            expectedResults = expectedRows;
-
+            expectedResults = expectedRows; // Store results from the correct query.
+            
             // --- LOG: Results Comparison ---
             console.log(`[QUERY CHALLENGE] User Rows: ${userResults.length} | Expected Rows: ${expectedResults.length}`);
             // -------------------------------
@@ -305,7 +311,7 @@ const submitQueryAnswer = async (req, res, next) => {
             if (challenge.validateFn(userResults)) {
                 // Strict JSON compare (Added from our previous fix)
                 const userJSON = JSON.stringify(userResults);
-                const expectedJSON = JSON.stringify(expectedResults);
+                const expectedJSON = JSON.stringify(expectedResults); // Convert results to JSON for comparison.
 
                 if (userJSON === expectedJSON) {
                     isCorrect = true;
@@ -345,7 +351,7 @@ const submitQueryAnswer = async (req, res, next) => {
         console.log(`[QUERY CHALLENGE] Outcome: ${isCorrect ? 'SUCCESS' : 'FAIL'} | Feedback: ${feedback}`);
         console.log('================================================');
 
-        const pointsEarned = isCorrect ? challenge.points : 0;
+        const pointsEarned = isCorrect ? challenge.points : 0; // Award points if correct.
 
         if (isCorrect && userId) {
             try {
@@ -377,10 +383,10 @@ const submitQueryAnswer = async (req, res, next) => {
     }
 };
 
-// Execute query in sandbox mode
+// Controller to execute a SQL query in a sandbox environment.
 const executeQuery = async (req, res, next) => {
     try {
-        const { query } = req.body;
+        const { query } = req.body; // SQL query from the request body.
 
         if (!query || typeof query !== 'string') {
             return res.status(400).json({ success: false, message: 'Query is required' });
@@ -388,6 +394,7 @@ const executeQuery = async (req, res, next) => {
 
         console.log(`[SANDBOX SQL] Running: ${query}`);
 
+        // Prevent execution of non-SELECT queries and dangerous commands.
         const normalizedQuery = query.trim().toUpperCase();
         if (!normalizedQuery.startsWith('SELECT')) {
             return res.status(400).json({ success: false, message: 'Only SELECT queries allowed' });
@@ -400,10 +407,12 @@ const executeQuery = async (req, res, next) => {
             }
         }
 
+        // Execute the query and measure execution time.
         const startTime = Date.now();
         const [results] = await pool.query(query);
         const executionTime = Date.now() - startTime;
-
+        
+        // Limit the number of results returned to prevent overwhelming the client.
         const limited = results.slice(0, 100);
 
         res.json({
@@ -425,15 +434,9 @@ const executeQuery = async (req, res, next) => {
     }
 };
 
-// Get database schema with detailed info
+// Controller to provide the database schema for SQL challenges.
 const getSchema = async (req, res, next) => {
     try {
-        // ... (Keep existing Schema definition) ...
-        // (For brevity, assuming you keep the long schema object from before)
-        // If you need me to paste the full schema again, let me know. 
-        // Just make sure to NOT delete it!
-        
-        // PASTE YOUR EXISTING SCHEMA OBJECT HERE
         const schema = {
             tables: [
                 {
@@ -679,7 +682,7 @@ const getSchema = async (req, res, next) => {
     }
 };
 
-// Get leaderboard
+// Controller to fetch the global leaderboard for SQL challenges.
 const getLeaderboard = async (req, res, next) => {
     try {
         const [users] = await pool.query(
