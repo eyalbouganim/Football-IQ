@@ -143,7 +143,7 @@ const SqlQuiz = () => {
         return colors[diff] || '#1890ff';
     };
 
-    const getDifficultyIcon = (diff) => {
+    const getDifficultyIcon = (diff) => { // Returns an icon based on difficulty
         if (diff === 'basic') return <StarOutlined />;
         if (diff === 'medium') return <FireOutlined />;
         if (diff === 'hard') return <RocketOutlined />;

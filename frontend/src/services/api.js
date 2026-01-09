@@ -59,7 +59,7 @@ export const sqlQuizAPI = {
     endGame: (data) => api.post('/sql/quiz/end', data),
 };
 
-// SQL Query API (Write Your Own SQL)
+// SQL Query API
 export const sqlQueryAPI = {
     getChallenges: (params = {}) => api.get('/sql/query/challenges', { params }),
     getChallenge: (id) => api.get(`/sql/query/challenges/${id}`),

@@ -1,4 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+// 1. Point explicitly to the .env file in the parent 'backend' directory
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+const fs = require('fs');
 const bcrypt = require('bcrypt');
 const { pool } = require('../config/database');
 
@@ -217,106 +221,47 @@ const footballQuestions = [
 ];
 
 const createGameTables = async () => {
-    console.log('🏗️  Creating Game System Tables...');
+    console.log('🏗️  Creating Database Structure from Schema...');
+
+    // 1. DROP only the Game System tables to ensure a clean slate
+    const gameTables = ['game_answers', 'game_sessions', 'questions', 'users'];
+    for (const table of gameTables) {
+        await pool.query(`DROP TABLE IF EXISTS ${table}`);
+    }
+
+    // 2. Read and Execute schema.sql (Source of Truth)
+    const schemaPath = path.join(__dirname, '../schema.sql');
     
-    // We drop these tables to ensure a clean slate (matching "force: true" behavior)
-    // Order matters because of Foreign Keys!
-    await pool.query('DROP TABLE IF EXISTS game_answers');
-    await pool.query('DROP TABLE IF EXISTS game_sessions');
-    await pool.query('DROP TABLE IF EXISTS questions');
-    await pool.query('DROP TABLE IF EXISTS users');
-
-    // 1. Users
-    await pool.query(`
-        CREATE TABLE users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) NOT NULL UNIQUE,
-            email VARCHAR(255) NOT NULL UNIQUE,
-            password VARCHAR(255) NOT NULL,
-            favorite_team VARCHAR(100),
-            total_score INT DEFAULT 0,
-            games_played INT DEFAULT 0,
-            highest_score INT DEFAULT 0,
-            is_active BOOLEAN DEFAULT true,
-            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )
-    `);
-
-    // 2. Questions
-    await pool.query(`
-        CREATE TABLE questions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            question TEXT NOT NULL,
-            options JSON NOT NULL,
-            correct_answer VARCHAR(500) NOT NULL,
-            difficulty ENUM('easy', 'medium', 'hard', 'expert') DEFAULT 'medium',
-            category VARCHAR(100) NOT NULL DEFAULT 'general',
-            points INT DEFAULT 10,
-            explanation TEXT,
-            sql_query TEXT,
-            is_active BOOLEAN DEFAULT true,
-            times_answered INT DEFAULT 0,
-            times_correct INT DEFAULT 0,
-            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )
-    `);
-
-    // 3. Game Sessions
-    await pool.query(`
-        CREATE TABLE game_sessions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            score INT DEFAULT 0,
-            total_questions INT DEFAULT 0,
-            correct_answers INT DEFAULT 0,
-            difficulty ENUM('easy', 'medium', 'hard', 'expert', 'mixed') DEFAULT 'mixed',
-            status ENUM('in_progress', 'completed', 'abandoned') DEFAULT 'in_progress',
-            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP NULL,
-            time_spent_seconds INT,
-            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    `);
-
-    // 4. Game Answers
-    await pool.query(`
-        CREATE TABLE game_answers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            session_id INT NOT NULL,
-            question_id INT NOT NULL,
-            user_answer VARCHAR(500) NOT NULL,
-            is_correct BOOLEAN NOT NULL,
-            points_earned INT DEFAULT 0,
-            time_spent_seconds INT,
-            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES game_sessions(id) ON DELETE CASCADE,
-            FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
-        )
-    `);
-
-    // Adding Indexes
-    console.log('⚡ Applying Indexes...');
+    if (!fs.existsSync(schemaPath)) {
+        throw new Error('Schema file not found at: ' + schemaPath);
+    }
     
-    // Questions: Optimizes fetching random active questions by difficulty
-    await pool.query('CREATE INDEX idx_questions_active_difficulty ON questions(is_active, difficulty)');
-    await pool.query('CREATE INDEX idx_questions_category ON questions(category)');
+    const schemaSql = fs.readFileSync(schemaPath, 'utf8');
 
-    // Users: Optimizes Leaderboard sorting
-    await pool.query('CREATE INDEX idx_users_total_score ON users(total_score)');
-    await pool.query('CREATE INDEX idx_users_highest_score ON users(highest_score)');
+    // Split by semicolon to execute statements individually 
+    const statements = schemaSql
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
 
-    // Game Sessions: Optimizes fetching user history
-    await pool.query('CREATE INDEX idx_sessions_user_id ON game_sessions(user_id)');
-    // -----------------------------
-
-    console.log('✅ Game Tables created');
-
-    console.log('✅ Indexes created');
+    for (const statement of statements) {
+        try {
+            await pool.query(statement);
+        } catch (error) {
+            // --- FIX: Ignore "Duplicate key name" (Error 1061) ---
+            // This happens because we intentionally kept the football tables, 
+            // so their indexes already exist.
+            if (error.errno === 1061) {
+                // Optional: Log it so you know it was skipped safely
+                // console.log(`   ⚠️  Skipping existing index`);
+            } else {
+                // If it's any other error, crash as usual
+                throw error;
+            }
+        }
+    }
+    
+    console.log('✅ Tables created successfully');
 };
 
 const seedDatabase = async () => {
@@ -380,6 +325,3 @@ const seedDatabase = async () => {
 if (require.main === module) {
     seedDatabase();
 }
-
-
-
