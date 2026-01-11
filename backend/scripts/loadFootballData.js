@@ -115,6 +115,12 @@ const MAPPERS = {
         cleanCurrency(row.transfer_fee),
         cleanCurrency(row.market_value_in_eur),
         row.player_name
+    ],
+    game_events: (row) => [
+        row.game_event_id, row.date || null, cleanInt(row.game_id),
+        cleanInt(row.minute), row.type, cleanInt(row.club_id),
+        cleanInt(row.player_id), row.description,
+        cleanInt(row.player_in_id), cleanInt(row.player_assist_id)
     ]
 };
 
@@ -209,6 +215,14 @@ async function loadFootballData() {
         await insertBatch('transfers',
             ['player_id', 'transfer_date', 'transfer_season', 'from_club_id', 'to_club_id', 'from_club_name', 'to_club_name', 'transfer_fee', 'market_value_in_eur', 'player_name'],
             transfers.map(MAPPERS.transfers)
+        );
+
+        // 7. Game Events
+        console.log('📊 Processing Game Events...');
+        const gameEvents = await loadCSV('game_events.csv');
+        await insertBatch('game_events',
+            ['game_event_id', 'date', 'game_id', 'minute', 'type', 'club_id', 'player_id', 'description', 'player_in_id', 'player_assist_id'],
+            gameEvents.map(MAPPERS.game_events)
         );
 
         console.log('\n🎉 FULL Data Load Complete!');

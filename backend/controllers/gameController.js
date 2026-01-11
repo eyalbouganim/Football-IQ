@@ -294,17 +294,6 @@ const getUserStats = async (req, res, next) => {
         const user = await User.findById(userId);
         if (!user) return next(new AppError('User not found', 404));
 
-        const recentGamesQuery = `SELECT * FROM game_sessions 
-                                  // Fetch the 5 most recent completed games for the user
-                                  WHERE user_id = ? AND status = 'completed' 
-                                  ORDER BY completed_at DESC 
-                                  LIMIT 5`;
-        
-        console.log(`[SQL LOG] Recent Games Query for User ${userId}:`, recentGamesQuery);
-
-        const [recentGames] = await pool.query(recentGamesQuery, [userId]);
-        // Calculate average score
-
         const totalScore = parseInt(user.totalScore || 0);
         const gamesPlayed = parseInt(user.gamesPlayed || 0);
         const highestScore = parseInt(user.highestScore || 0);
@@ -320,16 +309,7 @@ const getUserStats = async (req, res, next) => {
                     gamesPlayed: gamesPlayed,
                     highestScore: highestScore,
                     averageScore: avgScore
-                },
-                recentGames: recentGames.map(g => ({
-                    score: g.score,
-                    correctAnswers: g.correct_answers,
-                    totalQuestions: g.total_questions,
-                    accuracy: g.total_questions > 0 ? Math.round((g.correct_answers / g.total_questions) * 100) : 0,
-                    difficulty: g.difficulty,
-                    completedAt: g.completed_at,
-                    timeSpentSeconds: g.time_spent_seconds
-                }))
+                }
             }
         });
     } catch (error) {

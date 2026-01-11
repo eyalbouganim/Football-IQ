@@ -238,3 +238,8 @@ CREATE INDEX idx_appearances_player ON appearances(player_id);
 -- Indexes for the 'transfers' table
 CREATE INDEX idx_transfers_date ON transfers(transfer_date);
 CREATE INDEX idx_transfers_player_date ON transfers(player_id, transfer_date);
+
+-- Indexes for the 'game_events' table
+CREATE INDEX idx_game_events_game ON game_events(game_id);
+CREATE INDEX idx_game_events_player ON game_events(player_id);
+CREATE INDEX idx_game_events_type ON game_events(type);

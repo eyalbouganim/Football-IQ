@@ -33,7 +33,7 @@ const quizChallenges = [
             'D) Around 100,000'
         ],
         correctAnswer: 'B',
-        explanation: 'The players table contains approximately 25,000 professional football players from top leagues.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     {
         id: 2,
@@ -52,7 +52,7 @@ WHERE foot = 'Left';`,
             'D) More than 6,000'
         ],
         correctAnswer: 'C',
-        explanation: 'Approximately 20-25% of players are left-footed, which is around 4,000-5,000 players.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- CLUBS TABLE ---
@@ -73,7 +73,7 @@ WHERE squad_size > 30;`,
             'D) More than 300'
         ],
         correctAnswer: 'C',
-        explanation: 'Many top clubs maintain large squads for depth, with over 200 clubs having 30+ players.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- COMPETITIONS TABLE ---
@@ -94,7 +94,7 @@ WHERE type = 'domestic_league';`,
             'D) More than 60 leagues'
         ],
         correctAnswer: 'B',
-        explanation: 'The database includes top domestic leagues from Europe, Americas, and Asia.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- GAMES TABLE ---
@@ -115,7 +115,7 @@ WHERE home_club_goals > 5;`,
             'D) More than 1,500'
         ],
         correctAnswer: 'C',
-        explanation: 'High-scoring home wins (6+ goals) are relatively rare but do occur in several hundred matches.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- TRANSFERS TABLE ---
@@ -137,7 +137,7 @@ LIMIT 1;`,
             'D) Around €250 million'
         ],
         correctAnswer: 'C',
-        explanation: 'The record transfer fee is around €200-220 million (Neymar to PSG in 2017).'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- APPEARANCES TABLE ---
@@ -158,7 +158,7 @@ WHERE goals >= 3;`,
             'D) More than 3,000'
         ],
         correctAnswer: 'C',
-        explanation: 'Hat-tricks are special achievements, with around 2,000 recorded across all competitions.'
+        explanation: 'This answer is derived from the current dataset.'
     },
 
     // ========== MEDIUM (25 points) ==========
@@ -183,7 +183,7 @@ LIMIT 1;`,
             'D) Germany'
         ],
         correctAnswer: 'B',
-        explanation: 'England has the most registered players due to the extensive English football pyramid.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- CLUBS + AVG ---
@@ -204,7 +204,7 @@ WHERE domestic_competition_id = 'GB1';`,
             'D) Around 31-33 players'
         ],
         correctAnswer: 'B',
-        explanation: 'Premier League clubs typically maintain squads of 25-27 players for squad registration rules.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- APPEARANCES + HAVING ---
@@ -228,7 +228,7 @@ WHERE domestic_competition_id = 'GB1';`,
             'D) More than 100'
         ],
         correctAnswer: 'C',
-        explanation: 'Around 70-80 players have achieved over 100 goals across their careers in top leagues.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- TRANSFERS + SUM ---
@@ -252,7 +252,7 @@ LIMIT 1;`,
             'D) Real Madrid'
         ],
         correctAnswer: 'A',
-        explanation: 'Manchester City has the highest total transfer spending in football history.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- GAMES + AVG ATTENDANCE ---
@@ -276,7 +276,7 @@ LIMIT 1;`,
             'D) Santiago Bernabéu (Real Madrid)'
         ],
         correctAnswer: 'B',
-        explanation: 'Borussia Dortmund\'s Signal Iduna Park consistently has the highest average attendance in European football.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- COMPETITIONS + COUNT ---
@@ -299,7 +299,7 @@ LIMIT 1;`,
             'D) AFC (Asia)'
         ],
         correctAnswer: 'A',
-        explanation: 'UEFA has the most competitions due to numerous domestic leagues and cups across European countries.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- GAME_EVENTS TABLE ---
@@ -322,7 +322,7 @@ LIMIT 1;`,
             'D) Red Cards'
         ],
         correctAnswer: 'B',
-        explanation: 'Substitutions are the most common event with 3-5 per team per match (6-10 per game).'
+        explanation: 'This answer is derived from the current dataset.'
     },
 
     // ========== HARD (50 points) ==========
@@ -350,7 +350,7 @@ WHERE market_value_in_eur > 0;`,
             'D) Around 55-65%'
         ],
         correctAnswer: 'B',
-        explanation: 'Due to skewed distribution (few superstars), only about 30% of players are above average value.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- COMPLEX AGGREGATION - Goals Per Game ---
@@ -374,10 +374,10 @@ LIMIT 1;`,
             'A) Lionel Messi',
             'B) Robert Lewandowski',
             'C) Cristiano Ronaldo',
-            'D) Erling Haaland'
+            'D) Viktor Gyökeres'
         ],
         correctAnswer: 'D',
-        explanation: 'Erling Haaland has the best goals-per-game ratio among active players with 50+ appearances.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- JOIN + AGGREGATION - League Goals ---
@@ -403,7 +403,7 @@ LIMIT 1;`,
             'D) Eredivisie (Netherlands)'
         ],
         correctAnswer: 'A',
-        explanation: 'The Bundesliga consistently has the highest goals-per-game average among top 5 leagues.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- TRANSFER ANALYSIS - Busiest Season ---
@@ -428,8 +428,8 @@ LIMIT 1;`,
             'C) Summer 2021',
             'D) Summer 2023'
         ],
-        correctAnswer: 'B',
-        explanation: 'The 2019 summer window saw record-breaking spending before the COVID-19 pandemic.'
+        correctAnswer: 'D',
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- COMPLEX JOIN - Most Valuable Squad ---
@@ -455,7 +455,7 @@ LIMIT 1;`,
             'D) Chelsea'
         ],
         correctAnswer: 'A',
-        explanation: 'Manchester City has the most valuable squad with combined value exceeding €1 billion.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- CARD STATISTICS ---
@@ -481,7 +481,7 @@ LIMIT 1;`,
             'D) Nigel de Jong'
         ],
         correctAnswer: 'A',
-        explanation: 'Sergio Ramos holds the record for most cards received in top European competitions.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- HOME ADVANTAGE with CASE ---
@@ -505,7 +505,7 @@ FROM games;`,
             'D) Around 55-60%'
         ],
         correctAnswer: 'B',
-        explanation: 'Home teams win approximately 45% of matches, with about 25% draws and 30% away wins.'
+        explanation: 'This answer is derived from the current dataset.'
     },
     
     // --- HIGHEST SCORING MATCH ---
@@ -529,7 +529,7 @@ LIMIT 1;`,
             'D) 14+ goals'
         ],
         correctAnswer: 'C',
-        explanation: 'Some matches have ended with 12-13 combined goals, often in cup competitions.'
+        explanation: 'This answer is derived from the current dataset.'
     },
 
     // --- PLAYERS BY AGE GROUP ---
@@ -554,7 +554,7 @@ WHERE date_of_birth IS NOT NULL;`,
             'D) Around 65-75%'
         ],
         correctAnswer: 'B',
-        explanation: 'About 40% of professional players are under 25, with peak age being 24-29.'
+        explanation: 'This answer is derived from the current dataset.'
     },
 
     // --- BIGGEST TRANSFER PROFIT ---
@@ -578,7 +578,7 @@ LIMIT 1;`,
             'D) Sporting CP'
         ],
         correctAnswer: 'A',
-        explanation: 'Benfica has made the most money from player sales due to their excellent youth development.'
+        explanation: 'This answer is derived from the current dataset.'
     },
 
     // --- ASSISTS LEADERS ---
@@ -601,7 +601,7 @@ LIMIT 1;`,
             'D) Angel Di Maria'
         ],
         correctAnswer: 'C',
-        explanation: 'Thomas Müller is known as the "assist king" with the most assists in Bundesliga history.'
+        explanation: 'This answer is derived from the current dataset.'
     }
 ];
 
@@ -911,10 +911,20 @@ const verifyChallenge = async (db, challengeTemplate) => {
         // Execute the solution query
         const [rows] = await db.query(challenge.query);
         
-        if (!rows || rows.length === 0) return challenge;
+        if (!rows || rows.length === 0) {
+            challenge.explanation = `No data returned from database. ${challenge.explanation}`;
+            return challenge;
+        }
 
         const row = rows[0];
         const rowValues = Object.values(row);
+        
+        // Format values for display
+        const dbResultText = rowValues.map(v => {
+            if (v === null) return 'NULL';
+            if (typeof v === 'number') return v.toLocaleString();
+            return String(v);
+        }).join(', ');
         
         let bestOptionIndex = -1;
         let minDiff = Infinity;
@@ -945,6 +955,16 @@ const verifyChallenge = async (db, challengeTemplate) => {
                     return;
                 }
 
+                // 1b. Season Match: "YY/YY" (e.g. "23/24" -> matches "2023")
+                if (typeof val === 'string' && /^\d{2}\/\d{2}$/.test(val)) {
+                    const startYear = parseInt(val.split('/')[0], 10) + 2000;
+                    if (optText.includes(startYear.toString())) {
+                        bestOptionIndex = index;
+                        minDiff = -1;
+                        return;
+                    }
+                }
+
                 // Numeric checks
                 const actual = parseFloat(String(val).replace(/,/g, ''));
                 if (isNaN(actual)) continue;
@@ -959,6 +979,18 @@ const verifyChallenge = async (db, challengeTemplate) => {
                         minDiff = -1;
                         return;
                     }
+                }
+                
+                // 2b. Range Match: "X-Y" or "X - Y" (e.g. "25-35%")
+                const dashMatch = option.match(/(\d+[\d,.]*)\s*-\s*(\d+[\d,.]*)/);
+                if (dashMatch) {
+                     const min = parseNum(dashMatch[1], multiplier);
+                     const max = parseNum(dashMatch[2], multiplier);
+                     if (actual >= min && actual <= max) {
+                         bestOptionIndex = index;
+                         minDiff = -1;
+                         return;
+                     }
                 }
 
                 // 3. Inequality Match ("Less than", "More than")
@@ -997,10 +1029,15 @@ const verifyChallenge = async (db, challengeTemplate) => {
         if (bestOptionIndex !== -1) {
             const letters = ['A', 'B', 'C', 'D'];
             challenge.correctAnswer = letters[bestOptionIndex];
-            challenge.explanation = `Correct Answer: ${rowValues.join(', ')}`;
+            // Prepend the actual value to the explanation
+            challenge.explanation = `Correct Answer: ${dbResultText}. ${challenge.explanation}`;
+        } else {
+            // If no option matched, still show the DB result so user knows what happened
+            challenge.explanation = `Database Result: ${dbResultText}. ${challenge.explanation}`;
         }
     } catch (err) {
         console.warn(`[QuizGen] Failed to update challenge ${challenge.id}: ${err.message}`);
+        challenge.explanation = `Error fetching data: ${err.message}. ${challenge.explanation}`;
     }
     return challenge;
 };
