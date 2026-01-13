@@ -28,13 +28,14 @@ An interactive SQL learning game using real football data! Practice complex SQL 
 
 ## Features
 
-- 🎯 **15 SQL Challenges** - From easy GROUP BY to expert subqueries
-- 📊 **Real Football Data** - 10,000+ players, 20,000+ games, transfers & more
+- 🎯 **40 SQL Challenges** - 25 quiz challenges + 15 query challenges
+- 🇺🇸 **SQL Quiz Mode** - American-style multiple choice with real SQL queries
+- ✍️ **SQL Challenge Mode** - Write and execute your own SQL queries
+- 📊 **Real Football Data** - 25,000+ players, 20,000+ games, transfers & more
 - ⚡ **Optimized Performance** - Indexed MySQL database for fast complex queries
-- 💻 **Live Query Editor** - Write and execute SQL against real data
+- 💻 **Live Query Editor** - Write and execute SQL against real data with sandbox protection
 - 🏆 **Leaderboard** - Compete with other players
-- 🎮 **Trivia Mode** - Football knowledge quiz
-- 🔐 **User Authentication** - Track your progress
+- 🔐 **User Authentication** - Track your progress with JWT
 
 ## Tech Stack
 
@@ -150,23 +151,39 @@ To ensure the application runs smoothly with over 100,000+ records, we implement
 
 ## SQL Challenges
 
+The game offers two distinct modes to test your SQL skills:
+
+### 🇺🇸 SQL Quiz Mode (25 Challenges)
+American-style multiple choice questions! Each challenge shows:
+- A football-related question
+- The SQL query that answers it
+- Four answer options (A, B, C, D)
+
+The query runs against the live database, and you pick the correct answer. Perfect for learning SQL syntax and understanding query results!
+
+### ✍️ SQL Challenge Mode (15 Challenges)
+Write your own SQL queries to solve real problems:
+- Read the challenge description
+- Write a SELECT query
+- Test your query with limited runs
+- Submit for validation
+
 Practice these SQL concepts with real football data:
 
-| Difficulty | Topics |
-|------------|--------|
-| **Easy** | GROUP BY, COUNT, ORDER BY |
-| **Medium** | HAVING, SUM, AVG, multiple aggregates |
-| **Hard** | JOINs with GROUP BY, multi-table queries |
-| **Expert** | Subqueries, CASE statements, window-like queries |
+| Difficulty | Topics | Points |
+|------------|--------|---------|
+| **Basic** | GROUP BY, COUNT, ORDER BY, WHERE | 10 pts |
+| **Medium** | HAVING, SUM, AVG, multiple aggregates, UNION | 25 pts |
+| **Hard** | JOINs with GROUP BY, multi-table queries, subqueries, CASE | 50 pts |
 
 ### Example Challenge:
-**Find players who scored more than 10 goals. Show player name and total goals.**
+**Find players who scored more than 50 career goals. Show player name and total goals.**
 
 ```sql
-SELECT player_name, SUM(goals) as total_goals 
-FROM appearances 
-GROUP BY player_id, player_name 
-HAVING SUM(goals) > 10
+SELECT player_name, SUM(goals) as total_goals
+FROM appearances
+GROUP BY player_id, player_name
+HAVING total_goals > 50
 ORDER BY total_goals DESC
 ```
 
